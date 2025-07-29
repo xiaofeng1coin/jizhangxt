@@ -1,399 +1,193 @@
-/* static/css/mobile.css */
+/* =================================================================
+   Sunshine Accounting :: v3.3 - Final Mobile Styles
+   ================================================================= */
+
+/* --- 1. 全局变量与主题设定 --- */
 :root {
-    --bg-color: #f4f6f9;
-    --card-bg: #ffffff;
-    --text-primary: #1a202c;
-    --text-secondary: #6c757d;
-    --primary-color: #3b82f6;
-    --green-color: #1cb145;
-    --red-color: #ef4444;
-    --border-color: #e5e7eb;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    --font-family: 'Noto Sans SC', sans-serif;
-    --bottom-nav-height: 65px;
+    --bg-main: #f8f7f2;
+    --bg-content: #ffffff;
+    --text-primary: #3d3d3d;
+    --text-secondary: #858585;
+    --primary: #007aff;
+    --green: #34c759;
+    --red: #ff3b30;
+    --border-color: #edebe4;
+    --shadow-light: 0 3px 6px rgba(0,0,0,0.04);
+    --shadow-medium: 0 5px 15px rgba(0,0,0,0.08);
+    --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, 'Noto Sans SC', sans-serif;
+    --font-tech: 'Orbitron', sans-serif;
+    --nav-width: 260px;
+    --border-radius-main: 16px;
 }
 
-body {
-    margin: 0;
-    padding: 0;
-    font-family: var(--font-family);
-    background-color: var(--bg-color);
+/* --- 2. 基础与布局 --- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background-color: var(--bg-main); color: var(--text-primary); font-family: var(--font-main); overflow-x: hidden; line-height: 1.5; }
+.page-wrapper { background-color: var(--bg-main); min-height: 100vh; transition: transform 0.3s ease, filter 0.3s ease; }
+.main-header { display: flex; align-items: center; padding: 1rem 1.25rem; gap: 1rem; position: sticky; top: 0; background-color: var(--bg-main); z-index: 100; }
+.page-title { font-size: 1.25rem; font-weight: 600; flex-grow: 1; }
+.content-area { padding: 0 1rem 1rem; }
+.add-record-button { flex-shrink: 0; width: 32px; height: 32px; background-color: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.5rem; line-height: 1; transition: transform 0.2s; }
+.add-record-button:hover { transform: scale(1.1); }
+.content-card { background: var(--bg-content); border-radius: var(--border-radius-main); padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-light); border: 1px solid var(--border-color); }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.card-header.compact { margin-bottom: 0.5rem; }
+.card-header h3 { font-size: 1.1rem; font-weight: 600; }
+.card-header a { color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+.placeholder-text { color: var(--text-secondary); text-align: center; padding: 2rem 1rem; font-style: italic; font-size: 0.9rem; }
+.income { color: var(--green); }
+.expense { color: var(--red); }
+
+/* --- 3. 侧边导航 (Navigation) --- */
+.side-nav { position: fixed; top: 0; left: 0; width: var(--nav-width); height: 100vh; background-color: #1c1c1e; color: #fff; padding: 1.5rem 1rem; transform: translateX(calc(-1 * var(--nav-width))); transition: transform 0.3s ease; display: flex; flex-direction: column; z-index: 1001; }
+.nav-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transition: opacity 0.3s ease; z-index: 1000; }
+body.nav-open .side-nav { transform: translateX(0); }
+body.nav-open .nav-overlay { opacity: 1; visibility: visible; }
+body.nav-open .page-wrapper { transform: translateX(var(--nav-width)); filter: blur(3px); border-radius: 20px; overflow: hidden; }
+.nav-header h3 { font-family: var(--font-tech); font-size: 1.6rem; color: #fff; }
+.nav-header .version { font-size: 0.8rem; color: #888; }
+.nav-menu { flex-grow: 1; margin-top: 2rem; }
+.nav-link { display: flex; align-items: center; gap: 1rem; padding: 1rem; text-decoration: none; color: #ccc; border-radius: 8px; transition: background-color 0.2s, color 0.2s; font-size: 1.05rem; }
+.nav-link.active { color: #fff; background-color: rgba(0, 122, 255, 0.3); font-weight: 500; }
+.nav-link:hover:not(.active) { background-color: #2c2c2e; }
+.nav-footer { text-align: center; font-size: 0.8rem; color: #888; padding-bottom: 0.5rem; }
+.menu-toggle { width: 24px; height: 24px; background: none; border: none; cursor: pointer; display: flex; flex-direction: column; justify-content: space-around; }
+.menu-toggle span { display: block; width: 100%; height: 2.5px; background: var(--text-primary); border-radius: 3px; transition: all 0.3s; }
+body.nav-open .menu-toggle span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+body.nav-open .menu-toggle span:nth-child(2) { opacity: 0; }
+body.nav-open .menu-toggle span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+/* --- 4. 表单 (Forms) --- */
+.filter-form { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.filter-form label { color: var(--text-secondary); font-weight: 500; }
+.filter-form .select-wrapper { position: relative; }
+.filter-form .select-wrapper::after { content: '▼'; position: absolute; top: 50%; right: 1rem; transform: translateY(-50%); font-size: 0.6rem; color: var(--text-secondary); pointer-events: none; }
+/* 【核心修复】将 select 和 date 的样式分开，为 date 设置合适内边距 */
+.filter-form select {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding-bottom: var(--bottom-nav-height); /* 为底部导航留出空间 */
-}
-
-/* --- Layout & Header --- */
-.mobile-header {
-    background: var(--card-bg);
-    padding: 1rem 1.25rem;
-    text-align: center;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-.mobile-header h1 {
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin: 0;
-}
-.mobile-content {
-    padding: 1rem;
-}
-
-/* --- Bottom Navigation --- */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: var(--bottom-nav-height);
-    background-color: var(--card-bg);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
-    z-index: 1000;
-}
-.nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: var(--text-secondary);
-    font-size: 0.7rem;
-    flex-grow: 1;
-    border: none;
-    background: none;
-    cursor: pointer;
-}
-.nav-item .icon { font-size: 1.5rem; }
-.nav-item.active { color: var(--primary-color); }
-.nav-item.add-btn {
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: 50%;
-    width: 56px;
-    height: 56px;
-    margin-top: -30px;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-.nav-item.add-btn .icon { font-size: 2rem; line-height: 1; }
-
-/* --- General Components --- */
-.card-mobile {
-    background: var(--card-bg);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    box-shadow: var(--shadow);
-}
-.no-data-placeholder {
-    text-align: center;
-    padding: 2rem 1rem;
-    color: var(--text-secondary);
-}
-.income { color: var(--green-color); }
-.expense { color: var(--red-color); }
-
-/* --- Index Page --- */
-.summary-section, .budget-section {
-    background: var(--card-bg);
-    padding: 1rem;
-    border-radius: 12px;
-    margin-bottom: 1rem;
-}
-.summary-section h4, .budget-section h3 {
-    margin: 0 0 1rem;
-    font-size: 1rem;
-    font-weight: 500;
-}
-.monthly-summary { display: flex; justify-content: space-between; text-align: center; }
-.monthly-summary > div { flex: 1; }
-.monthly-summary span { font-size: 0.8rem; color: var(--text-secondary); }
-.monthly-summary p { font-size: 1.1rem; font-weight: bold; margin: 0.25rem 0 0; }
-.overall-budget-mobile .progress-bar-info, .budget-item-info { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.25rem; }
-.progress-bar-container { background: #e5e7eb; border-radius: 99px; height: 8px; overflow: hidden; margin-top: 4px;}
-.progress-bar { background: var(--primary-color); height: 100%; }
-.progress-bar.overspent-bar { background-color: var(--red-color); }
-.category-budgets-list-mobile .budget-item-mobile { margin-top: 1rem; }
-.budget-item-info .amount.overspent { color: var(--red-color); font-weight: bold; }
-
-/* --- Records Page --- */
-.date-selector-mobile { margin-bottom: 1rem; }
-.date-selector-mobile input[type="date"] {
-    width: 100%; padding: 0.75rem; border: 1px solid var(--border-color);
-    border-radius: 8px; background: var(--card-bg); text-align: center; font-weight: 500;
-}
-.daily-summary-mobile { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.daily-summary-mobile .summary-item {
-    flex: 1; background: var(--card-bg); padding: 0.75rem;
-    border-radius: 8px; text-align: center;
-}
-.daily-summary-mobile span { font-size: 0.8rem; color: var(--text-secondary); }
-.daily-summary-mobile strong { display: block; font-size: 1rem; margin-top: 4px; }
-.records-list-mobile .record-item-mobile {
-    display: flex; align-items: center; gap: 1rem;
-    background: var(--card-bg); padding: 1rem;
-    border-radius: 12px; margin-bottom: 0.75rem;
-}
-.record-icon {
-    width: 40px; height: 40px; border-radius: 50%;
-    background-color: #eef2ff; color: var(--primary-color);
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold; flex-shrink: 0;
-}
-.record-details { flex-grow: 1; }
-.record-details .row-1, .record-details .row-2 { display: flex; justify-content: space-between; align-items: center; }
-.record-details .category { font-weight: 500; }
-.record-details .amount { font-weight: bold; }
-.record-details .description { font-size: 0.8rem; color: var(--text-secondary); }
-.record-details .actions { display:flex; gap:0.5rem; }
-.record-details .action-btn { font-size: 0.8rem; color: var(--text-secondary); background: none; border: none; padding: 0; cursor: pointer; text-decoration: none; }
-.action-btn.delete { color: var(--red-color); }
-
-/* --- Add Record Form Overlay --- */
-.add-record-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 2000;
-    display: none; /* Changed by JS */
-    align-items: flex-end;
-}
-.add-record-form-container {
-    background: var(--bg-color);
-    width: 100%;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    padding: 1rem;
-    animation: slideUp 0.3s ease-out;
-}
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.add-record-header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.add-record-header h3 { margin: 0; font-size: 1.2rem; }
-.close-btn { font-size: 1.8rem; background: none; border: none; cursor: pointer; color: var(--text-secondary); }
-#add-record-form-mobile .amount-input-wrapper { display: flex; align-items: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
-#add-record-form-mobile .currency-symbol { font-size: 2rem; color: var(--text-secondary); margin-right: 0.5rem; }
-#add-record-form-mobile input[type="number"] { font-size: 2.5rem; font-weight: bold; border: none; background: none; width: 100%; padding: 0; }
-#add-record-form-mobile input:focus { outline: none; }
-.type-tabs { display: flex; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; }
-.tab-btn { flex: 1; padding: 0.75rem; border: none; background: none; font-weight: 500; cursor: pointer; }
-.tab-btn.active { background-color: var(--primary-color); color: white; }
-.category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
-.category-btn {
-    padding: 0.7rem; border: 1px solid var(--border-color);
-    border-radius: 8px; background: var(--card-bg);
-    cursor: pointer;
-}
-.category-btn.selected { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
-#add-record-form-mobile .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
-#add-record-form-mobile input[type="date"], #add-record-form-mobile input[type="text"] { width: 100%; padding: 0.7rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--card-bg); }
-.btn-submit-mobile { width: 100%; padding: 1rem; background: var(--primary-color); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
-
-/* --- Settings page --- */
-.settings-group { background: var(--card-bg); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
-.settings-group h3, .category-management-mobile h4 { margin: 0 0 1rem; font-size: 1rem; font-weight: 500; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
-.budget-setting-item, .category-list-mobile li { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
-.budget-list li:last-child { border-bottom: none; }
-.budget-input { display: flex; align-items: center; gap: 0.3rem; }
-.budget-input span { color: var(--text-secondary); }
-.budget-input input { width: 80px; text-align: right; padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; }
-.add-category-form-mobile { display: flex; gap: 0.5rem; margin-top: 1rem; }
-.add-category-form-mobile input { flex-grow: 1; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; }
-.add-category-form-mobile button { background: var(--primary-color); color: #fff; border: none; border-radius: 6px; width: 36px; height: 36px; font-size: 1.5rem; line-height: 1; }
-.btn-delete-sm { color: var(--red-color); }
-.btn-secondary-mobile.full-width { display: block; text-align: center; }
-
-/* SweetAlert on mobile */
-body.swal2-shown > .bottom-nav { display: none; }
-
-/* === 追加到 static/css/mobile.css 文件末尾 === */
-
-/* --- Edit Record Page Styles --- */
-.edit-form-mobile-container {
-    background: var(--card-bg);
-    padding: 1rem 1.25rem 2rem;
-    border-radius: 12px;
-}
-
-.form-group-mobile {
-    margin-bottom: 1.25rem;
-}
-
-.form-group-mobile label {
-    display: block;
+    padding: 0.6rem 2rem 0.6rem 0.8rem; /* 保持给下拉箭头留空间 */
+    border-radius: 8px;
     font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-bottom: 0.5rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
-.type-selector-mobile {
-    display: flex;
+.filter-form input[type="date"] {
+    background-color: var(--bg-main);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.type-selector-mobile input[type="radio"] {
-    display: none;
-}
-
-.type-selector-mobile label {
-    flex: 1;
-    text-align: center;
-    padding: 0.75rem;
-    margin: 0;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    background-color: var(--bg-color);
-}
-
-.type-selector-mobile input[type="radio"]:checked+label {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.input-with-prefix {
-    display: flex;
-    align-items: center;
-    background-color: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 0 0.75rem;
-}
-
-.input-with-prefix span {
-    font-size: 1.5rem;
-    color: var(--text-secondary);
-    padding-right: 0.5rem;
-}
-
-.input-with-prefix input {
-    border: none;
-    background: none;
-    padding: 0.75rem 0;
-    width: 100%;
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-.input-with-prefix input:focus {
-    outline: none;
-}
-
-.edit-form-mobile-container input[type="text"],
-.edit-form-mobile-container input[type="date"] {
-    width: 100%;
-    padding: 0.8rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background-color: var(--bg-color);
-    font-size: 1rem;
-}
-
-.form-actions-mobile {
-    margin-top: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-.btn-secondary-mobile {
-    display: inline-block;
-    width: 100%;
-    padding: 1rem;
-    background-color: #e5e7eb;
     color: var(--text-primary);
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    text-decoration: none;
-    text-align: center;
-    box-sizing: border-box; /* Important for 100% width with padding */
-}
-
-
-/* --- Annual Report Page Styles --- */
-.report-container-mobile {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-#year-selector-form-mobile select {
-    width: 100%;
-    padding: 0.8rem;
-    border: 1px solid var(--border-color);
+    padding: 0.6rem 0.8rem; /* <-- 修正点：使用对称的内边距，不再为箭头留空间 */
     border-radius: 8px;
-    background-color: var(--card-bg);
-    font-size: 1rem;
-    font-weight: 500;
-}
-
-.report-summary-card h3 {
-    margin: 0 0 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 1rem;
-    font-weight: 500;
-}
-
-.metric-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-}
-
-.metric-item span {
-    color: var(--text-secondary);
     font-size: 0.9rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
-.metric-item strong {
-    font-size: 1.1rem;
-}
+.modern-form { padding-top: 0.25rem; }
+.type-segmented-control { display: flex; background-color: var(--bg-main); border-radius: 12px; padding: 5px; margin-bottom: 1.5rem; }
+.type-segmented-control input[type="radio"] { display: none; }
+.type-segmented-control label { flex: 1; text-align: center; padding: 0.8rem; border-radius: 9px; cursor: pointer; font-weight: 500; color: var(--text-secondary); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.type-segmented-control input[type="radio"]:checked + label { background-color: var(--bg-content); color: var(--text-primary); box-shadow: var(--shadow-medium); font-weight: 600; }
+.type-segmented-control input#type_expense:checked + label { color: var(--red); }
+.type-segmented-control input#type_income:checked + label { color: var(--green); }
+.modern-form .form-group { margin-bottom: 1.25rem; }
+.modern-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.modern-form label { display: block; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+.modern-form input, .modern-form select { width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.85rem; border-radius: 8px; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+.modern-form input:focus, .modern-form select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2); }
+.btn-submit { display: block; width: 100%; padding: 1rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; margin-top: 1.5rem; }
+.btn-submit:hover { background-color: #0056b3; }
+.btn-cancel { display: block; width: 100%; text-align: center; padding: 1rem; margin-top: 0.75rem; text-decoration: none; color: var(--text-secondary); font-weight: 500; }
 
-.chart-card-mobile {
-    min-height: 250px;
-    display: flex;
-    flex-direction: column;
-}
-.chart-card-mobile h3 {
-    margin: 0 0 1rem;
-    font-size: 1rem;
-    font-weight: 500;
-}
+/* --- 5. 页面特定样式 (Page-Specific) --- */
 
-.chart-wrapper-mobile {
-    position: relative;
-    flex-grow: 1;
-}
+/* 5.1 Dashboard (index.html) */
+.header-block { padding: 1rem 0 1.5rem; text-align: center; }
+.header-block .label { color: var(--text-secondary); font-size: 1rem; }
+.header-block .amount-hero { font-family: var(--font-tech); font-size: 3.2rem; margin: 0.5rem 0 1.5rem; }
+.sub-stats { display: flex; justify-content: space-around; }
+.sub-stats strong { display: block; font-size: 1.2rem; font-weight: 500; }
+.actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.action-card { background: var(--bg-content); border-radius: var(--border-radius-main); padding: 1.25rem 1rem; text-align: center; text-decoration: none; color: var(--text-primary); transition: transform 0.2s, box-shadow 0.2s; border: 1px solid var(--border-color); }
+.action-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-medium); }
+.action-card.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.action-card .icon { font-size: 1.8rem; display: block; margin-bottom: 0.5rem; }
+.action-card .title { font-weight: 600; }
+.action-card .subtitle { font-size: 0.8rem; color: var(--text-secondary); }
+.action-card.primary .subtitle { color: rgba(255,255,255,0.8); }
+.budget-list { display: flex; flex-direction: column; gap: 1rem; }
+.budget-item { font-size: 0.9rem; }
+.budget-item .progress-info { display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-weight: 500; }
+.budget-item .amount.overspent { color: var(--red); font-weight: bold; }
+.progress-bar-container { background: var(--bg-main); border-radius: 99px; height: 10px; overflow: hidden; }
+.progress-bar-container.small { height: 6px; }
+.progress-bar { background: var(--primary); height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+.progress-bar.overspent-bar { background-color: var(--red); }
 
-.summary-text {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.6;
-}
+/* 5.2 Records (records.html) */
+.summary-tags { display: flex; gap: 0.5rem; }
+.summary-tags .tag { font-size: 0.8rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 99px; }
+.summary-tags .tag.income { background-color: rgba(52, 199, 89, 0.1); color: var(--green); }
+.summary-tags .tag.expense { background-color: rgba(255, 59, 48, 0.1); color: var(--red); }
+.records-list { list-style: none; }
+.record-item { display: flex; align-items: center; padding: 1rem 0; gap: 1rem; }
+.record-item:not(:last-child) { border-bottom: 1px solid var(--border-color); }
+.record-item .icon-block { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; }
+.record-item .icon-block.income { background: rgba(52, 199, 89, 0.1); color: var(--green); }
+.record-item .icon-block.expense { background: rgba(255, 59, 48, 0.1); color: var(--red); }
+.record-item .info-block { flex-grow: 1; overflow: hidden; }
+.record-item .info-block .category { font-weight: 500; }
+.record-item .info-block .description { font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.record-item .amount-block { text-align: right; }
+.record-item .amount-block .amount { font-weight: 500; }
+.record-item .amount-block .actions { font-size: 0.8rem; display: flex; gap: 0.75rem; margin-top: 0.2rem; }
+.record-item .amount-block .actions a { color: var(--text-secondary); text-decoration: none; }
+.record-item .amount-block .actions button { background: none; border: none; font-size: inherit; color: var(--text-secondary); cursor: pointer; padding: 0; }
+.record-item .amount-block .actions form { display: inline; }
 
-.top-categories-list-mobile {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
+/* 5.3 Annual Report (annual_report.html) */
+.stat-list { list-style: none; display: flex; flex-direction: column; gap: 0.8rem; }
+.stat-list li { display: flex; justify-content: space-between; align-items: center; }
+.stat-list.ranked li span:first-child { font-weight: 500; }
+.chart-container { height: 250px; }
 
-.top-categories-list-mobile li {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-}
+/* 5.4 Settings (settings.html) - 新增样式 */
+.settings-form { display: flex; flex-direction: column; }
+.setting-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.setting-item { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; font-size: 1rem; }
+.setting-item:not(:last-child) { border-bottom: 1px solid var(--border-color); }
+.setting-item label, .setting-item > span { color: var(--text-primary); font-weight: 500; flex-grow: 1; }
+.setting-item .input-with-prefix { display: flex; align-items: center; gap: 0.5rem; background-color: var(--bg-main); padding-left: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); transition: border-color 0.2s, box-shadow 0.2s; }
+.setting-item .input-with-prefix:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2); }
+.setting-item .input-with-prefix span { color: var(--text-secondary); font-weight: 500; }
+.setting-item input[type="number"] { border: none; background: transparent; padding: 0.8rem; text-align: right; width: 120px; font-size: 1rem; }
+.setting-item input[type="number"]:focus { outline: none; }
+.setting-item input[type="number"]::placeholder { color: var(--text-secondary); font-style: italic; }
+.placeholder-text-small { padding: 1.5rem 0; text-align: center; color: var(--text-secondary); font-style: italic; font-size: 0.9rem; }
+.settings-form .btn-submit { margin-top: 1.5rem; }
+.category-section { padding: 1rem 0; }
+.category-section:not(:last-of-type) { border-bottom: 1px solid var(--border-color); margin-bottom: 1rem; }
+.category-subtitle { font-size: 1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.add-category-form { display: flex; gap: 0.5rem; margin-top: 1rem; }
+.add-category-form input[type="text"] { flex-grow: 1; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; font-size: 1rem; }
+.add-category-form button { flex-shrink: 0; width: 44px; height: 44px; border: none; background: var(--primary); color: white; font-size: 1.5rem; font-weight: 500; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
+.add-category-form button:hover { background-color: #0056b3; }
+.setting-item .btn-delete { width: 30px; height: 30px; background-color: rgba(255, 59, 48, 0.1); color: var(--red); border: none; border-radius: 50%; font-size: 1.2rem; line-height: 1; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.setting-item .btn-delete:hover { background-color: var(--red); color: white; }
+.export-link { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; text-decoration: none; font-size: 1.1rem; font-weight: 500; color: var(--primary); }
+.card-header-subtitle { font-size: 0.9rem; color: var(--text-secondary); }
+
+/* --- 6. 第三方库 & 杂项 (3rd Party & Misc) --- */
+/* SweetAlert2 Toast Notifications */
+.swal2-toast { background: #1e1e1e !important; color: #e0e0e0 !important; box-shadow: var(--shadow-medium) !important; }
+.swal2-toast .swal2-title { color: #e0e0e0 !important; }
+/* SweetAlert2 Modal Confirmation */
+.swal2-popup.swal2-modal { background: var(--bg-content) !important; color: var(--text-primary) !important; border-radius: var(--border-radius-main) !important; }
+.swal2-popup.swal2-modal .swal2-title { color: var(--text-primary) !important; }
+.swal2-popup.swal2-modal .swal2-html-container { color: var(--text-secondary) !important; }
+.swal2-popup.swal2-modal .swal2-confirm { background-color: var(--primary) !important; border-radius: 8px !important; }
+.swal2-popup.swal2-modal .swal2-cancel { background-color: var(--bg-main) !important; color: var(--text-secondary) !important; border-radius: 8px !important; }

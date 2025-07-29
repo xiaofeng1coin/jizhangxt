@@ -1,0 +1,94 @@
+{# 文件: templates/mobile/settings.html (样式重构版) #}
+
+{% extends 'mobile/layout.html' %}
+{% block title %}系统设置{% endblock %}
+{% block page_title %}系统设置{% endblock %}
+
+{% block content %}
+<!-- 月度预算 -->
+<div class="content-card">
+    <div class="card-header">
+        <h3>月度预算</h3>
+        <span class="card-header-subtitle">为支出类别设定预算</span>
+    </div>
+    <form action="{{ url_for('settings') }}" method="post" class="settings-form">
+        <ul class="setting-list">
+            {% if categories.expense %}
+                {% for cat in categories.expense %}
+                <li class="setting-item">
+                    <label for="budget_{{ cat }}">{{ cat }}</label>
+                    <div class="input-with-prefix">
+                        <span>¥</span>
+                        <input type="number" step="0.01" min="0" name="budget_{{ cat }}" value="{{ budgets[cat]|default('', true) }}" placeholder="未设置">
+                    </div>
+                </li>
+                {% endfor %}
+            {% else %}
+                <li class="placeholder-text-small">请先添加支出类别</li>
+            {% endif %}
+        </ul>
+        {% if categories.expense %}
+            <button type="submit" class="btn-submit">保存预算</button>
+        {% endif %}
+    </form>
+</div>
+
+<!-- 【布局修正】类别管理现在是单列堆叠，更适合移动端 -->
+<div class="content-card">
+    <div class="card-header">
+        <h3>类别管理</h3>
+    </div>
+    
+    <!-- 支出类别 -->
+    <div class="category-section">
+        <h4 class="category-subtitle">支出类别</h4>
+        <ul class="setting-list">
+            {% for cat in categories.expense %}
+            <li class="setting-item">
+                <span>{{ cat }}</span>
+                <form class="delete-form" action="{{ url_for('delete_category') }}" method="post" data-message="确定删除支出类别 '{{ cat }}' 吗？">
+                    <input type="hidden" name="type" value="expense">
+                    <input type="hidden" name="category" value="{{ cat }}">
+                    <button type="submit" class="btn-delete" aria-label="删除">&times;</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        <form action="{{ url_for('add_category') }}" method="post" class="add-category-form">
+            <input type="hidden" name="type" value="expense">
+            <input type="text" name="new_category" placeholder="新增支出类别" required>
+            <button type="submit" aria-label="添加">+</button>
+        </form>
+    </div>
+
+    <!-- 收入类别 -->
+    <div class="category-section">
+        <h4 class="category-subtitle">收入类别</h4>
+        <ul class="setting-list">
+            {% for cat in categories.income %}
+            <li class="setting-item">
+                <span>{{ cat }}</span>
+                <form class="delete-form" action="{{ url_for('delete_category') }}" method="post" data-message="确定删除收入类别 '{{ cat }}' 吗？">
+                    <input type="hidden" name="type" value="income">
+                    <input type="hidden" name="category" value="{{ cat }}">
+                    <button type="submit" class="btn-delete" aria-label="删除">&times;</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        <form action="{{ url_for('add_category') }}" method="post" class="add-category-form">
+            <input type="hidden" name="type" value="income">
+            <input type="text" name="new_category" placeholder="新增收入类别" required>
+            <button type="submit" aria-label="添加">+</button>
+        </form>
+    </div>
+</div>
+
+<!-- 数据导出 -->
+<div class="content-card">
+    <a href="{{ url_for('export_csv') }}" class="export-link">
+        <span>导出全部数据</span>
+        <span>&rarr;</span>
+    </a>
+</div>
+{% endblock %}

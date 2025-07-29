@@ -1,0 +1,82 @@
+{% extends 'mobile/layout.html' %}
+{% block title %}年度报告{% endblock %}
+{% block page_title %}年度报告{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    {# --- 新的表单结构，用div包裹select --- #}
+<form class="filter-form" method="get" action="{{ url_for('annual_report') }}">
+    <label for="year-select">选择年份</label>
+    <div class="select-wrapper">
+        <select name="year" id="year-select" onchange="this.form.submit();">
+            {% if not all_years %}<option>{{ selected_year }}</option>{% endif %}
+            {% for year in all_years %}
+                <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}年</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+</div>
+
+{% if selected_year and (total_income > 0 or total_expense > 0) %}
+    <div class="content-card">
+        <div class="card-header compact"><h3>财务概览</h3></div>
+        <ul class="stat-list">
+            <li><span>总收入</span><strong class="income">+ ¥{{ '%.2f'|format(total_income) }}</strong></li>
+            <li><span>总支出</span><strong class="expense">- ¥{{ '%.2f'|format(total_expense) }}</strong></li>
+            <li><span>净结余</span><strong>¥{{ '%.2f'|format(total_balance) }}</strong></li>
+        </ul>
+    </div>
+
+    <div class="content-card">
+        <div class="card-header compact"><h3>月度趋势</h3></div>
+        <div class="chart-container">
+            <canvas id="trendsChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="content-card">
+        <div class="card-header compact"><h3>智能摘要</h3></div>
+        <p class="placeholder-text">{{ ai_summary }}</p>
+    </div>
+
+    <div class="content-card">
+        <div class="card-header compact"><h3>Top 5 支出类别</h3></div>
+        {% if top_expense_categories %}
+        <ul class="stat-list ranked">
+            {% for cat, amount in top_expense_categories %}
+            <li><span>{{ loop.index }}. {{ cat }}</span><span class="expense">- ¥{{ '%.2f'|format(amount) }}</span></li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="placeholder-text">无支出分类数据</p>
+        {% endif %}
+    </div>
+{% else %}
+    <div class="content-card placeholder-text">
+        该年度无数据，请尝试选择其他年份。
+    </div>
+{% endif %}
+{% if selected_year and (total_income > 0 or total_expense > 0) %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const trendsCtx = document.getElementById('trendsChart');
+    if (!trendsCtx) return;
+    const monthlyTrends = {{ monthly_trends|tojson|safe }};
+    const labels = Object.keys(monthlyTrends).sort();
+    new Chart(trendsCtx, {
+        type: 'line',
+        data: {
+            labels: labels.map(l => l.substring(5) + '月'),
+            datasets: [
+                { label: '收入', data: labels.map(l => monthlyTrends[l].income), borderColor: '#1cb145', backgroundColor: 'rgba(28, 177, 69, 0.1)', fill: true, tension: 0.3 },
+                { label: '支出', data: labels.map(l => monthlyTrends[l].expense), borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.3 }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

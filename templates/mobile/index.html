@@ -1,0 +1,62 @@
+{% extends 'mobile/layout.html' %}
+{% block title %}仪表盘{% endblock %}
+{% block page_title %}仪表盘{% endblock %}
+
+{% block content %}
+<div class="header-block">
+    <p class="label">本月净结余</p>
+    <p class="amount-hero">¥{{ '%.2f'|format(monthly_savings) }}</p>
+    <div class="sub-stats">
+        <div>
+            <span class="label">总收入</span>
+            <strong class="income">+ ¥{{ '%.2f'|format(monthly_income_total) }}</strong>
+        </div>
+        <div>
+            <span class="label">总支出</span>
+            <strong class="expense">- ¥{{ '%.2f'|format(monthly_expense_total) }}</strong>
+        </div>
+    </div>
+</div>
+
+<div class="actions-grid">
+    <a href="{{ url_for('add_form') }}" class="action-card primary">
+        <span class="icon">+</span>
+        <span class="title">记一笔</span>
+        <span class="subtitle">记录你的每份收支</span>
+    </a>
+    <a href="{{ url_for('records') }}" class="action-card">
+        <span class="icon">📂</span>
+        <span class="title">查看流水</span>
+        <span class="subtitle">回顾历史账单</span>
+    </a>
+</div>
+
+<div class="content-card">
+    <div class="card-header">
+        <h3>预算概览</h3>
+        <a href="{{ url_for('settings') }}">管理</a>
+    </div>
+    {% if total_budget > 0 %}
+        <div class="budget-list">
+            <div class="budget-item">
+                <div class="progress-info">
+                    <span>总预算</span>
+                    <span>{{ '%.0f'|format(overall_budget_progress) }}%</span>
+                </div>
+                <div class="progress-bar-container"><div class="progress-bar" style="width:{{ overall_budget_progress }}%;"></div></div>
+            </div>
+            {% for category, data in budget_progress.items() %}
+            <div class="budget-item">
+                <div class="progress-info">
+                    <span>{{ category }}</span>
+                    <span class="amount {% if data.overspent %}overspent{% endif %}">¥{{ '%.0f'|format(data.spent) }} / {{ '%.0f'|format(data.budget) }}</span>
+                </div>
+                <div class="progress-bar-container small"><div class="progress-bar {% if data.overspent %}overspent-bar{% endif %}" style="width:{{ data.progress }}%;"></div></div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="placeholder-text">暂未设置预算，<a href="{{ url_for('settings') }}">立即前往设置</a>。</p>
+    {% endif %}
+</div>
+{% endblock %}

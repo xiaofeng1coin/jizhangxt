@@ -1,92 +1,73 @@
-// static/js/mobile.js
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Add Record Overlay Logic ---
-    const addRecordBtn = document.getElementById('add-record-btn');
-    const closeFormBtn = document.getElementById('close-add-form');
-    const overlay = document.getElementById('add-record-overlay');
-    const form = document.getElementById('add-record-form-mobile');
 
-    if (addRecordBtn && overlay && closeFormBtn) {
-        addRecordBtn.addEventListener('click', () => {
-            overlay.style.display = 'flex';
-        });
+    // --- Core: Side Navigation Toggle ---
+    const menuToggle = document.querySelector('.menu-toggle');
+    const navOverlay = document.querySelector('.nav-overlay');
+    if (menuToggle && navOverlay) {
+        const toggleNav = () => document.body.classList.toggle('nav-open');
+        menuToggle.addEventListener('click', toggleNav);
+        navOverlay.addEventListener('click', toggleNav);
+    }
 
-        closeFormBtn.addEventListener('click', () => {
-            overlay.style.display = 'none';
-        });
-
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.style.display = 'none';
-            }
+    // --- Global: Flash Messages via SweetAlert2 ---
+    const flashContainer = document.getElementById('flash-container-mobile');
+    if (flashContainer) {
+        flashContainer.querySelectorAll('div').forEach(flash => {
+            const category = flash.dataset.category || 'info';
+            const message = flash.dataset.message;
+            let icon = 'info';
+            if (category === 'success') icon = 'success';
+            if (category === 'danger') icon = 'error';
+            if (category === 'warning') icon = 'warning';
+            
+            Swal.fire({
+                toast: true, position: 'top', icon: icon, title: message,
+                showConfirmButton: false, timer: 3000, timerProgressBar: true,
+                background: '#1e1e1e', color: '#e0e0e0'
+            });
         });
     }
 
-    // --- Add Record Form Logic ---
-    if (form) {
-        const typeTabs = form.querySelector('.type-tabs');
-        const expenseCategories = form.querySelector('#expense-categories');
-        const incomeCategories = form.querySelector('#income-categories');
-        const recordTypeInput = form.querySelector('#record-type');
-        const selectedCategoryInput = form.querySelector('#selected-category');
-
-        typeTabs.addEventListener('click', (e) => {
-            if (e.target.matches('.tab-btn')) {
-                const type = e.target.dataset.type;
-
-                // Update tabs
-                typeTabs.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-
-                // Update category visibility
-                if (type === 'expense') {
-                    expenseCategories.style.display = 'grid';
-                    incomeCategories.style.display = 'none';
-                } else {
-                    expenseCategories.style.display = 'none';
-                    incomeCategories.style.display = 'grid';
-                }
-
-                // Reset selected category
-                selectedCategoryInput.value = '';
-                form.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('selected'));
-                recordTypeInput.value = type;
-            }
-        });
-
-        form.querySelector('.type-category-selector').addEventListener('click', (e) => {
-             if (e.target.matches('.category-btn')) {
-                const category = e.target.dataset.category;
-                selectedCategoryInput.value = category;
-
-                // Update visual selection
-                form.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('selected'));
-                e.target.classList.add('selected');
-             }
-        });
-    }
-
-    // --- Generic Delete Confirmation ---
-    document.body.addEventListener('submit', function(event) {
-        const form = event.target.closest('form.delete-form');
-        if (!form) return;
-
-        event.preventDefault();
-        const message = form.dataset.message || '确定要删除吗?';
-
-        Swal.fire({
-            title: message,
-            text: "此操作无法撤销",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '是的, 删除!',
-            cancelButtonText: '取消'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                form.submit();
-            }
+    // --- Global: Delete Confirmation ---
+    document.querySelectorAll('.delete-form').forEach(form => {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            Swal.fire({
+                title: '确认操作', text: this.dataset.message, icon: 'warning',
+                showCancelButton: true, confirmButtonText: '确定删除', cancelButtonText: '取消',
+                confirmButtonColor: '#f44336', background: '#1e1e1e', color: '#e0e0e0'
+            }).then(result => result.isConfirmed && this.submit());
         });
     });
+
+    // --- Add/Edit Form: Dynamic Category Dropdown ---
+    const modernForm = document.querySelector('.modern-form');
+    if (modernForm) {
+        const typeExpense = document.getElementById('type_expense');
+        const typeIncome = document.getElementById('type_income');
+        const categorySelect = document.getElementById('category');
+
+        const populateCategories = () => {
+            const isExpense = typeExpense.checked;
+            const categories = isExpense ? G_EXPENSE_CATEGORIES : G_INCOME_CATEGORIES;
+            
+            categorySelect.innerHTML = ''; // Clear options
+            
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                if (cat === G_SELECTED_CATEGORY) {
+                    option.selected = true;
+                }
+                categorySelect.appendChild(option);
+            });
+        };
+
+        typeExpense.addEventListener('change', populateCategories);
+        typeIncome.addEventListener('change', populateCategories);
+        
+        // Initial population
+        populateCategories();
+    }
 });

@@ -1,0 +1,50 @@
+{% extends 'mobile/layout.html' %}
+{% block title %}详细流水{% endblock %}
+{% block page_title %}详细流水{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <form class="filter-form" method="get" action="{{ url_for('records') }}">
+        <label for="date-picker">选择日期</label>
+        <input type="date" id="date-picker" name="selected_date" value="{{ selected_date }}" onchange="this.form.submit()">
+    </form>
+</div>
+
+<div class="content-card">
+    <div class="card-header compact">
+        <h3>当日明细</h3>
+        <div class="summary-tags">
+            <span class="tag income">+ ¥{{ '%.2f'|format(daily_income_total) }}</span>
+            <span class="tag expense">- ¥{{ '%.2f'|format(daily_expense_total) }}</span>
+        </div>
+    </div>
+    <ul class="records-list">
+    {% if not income_records and not expense_records %}
+        <li class="placeholder-text">当日无任何记录。</li>
+    {% else %}
+        {% for record in (income_records + expense_records)|sort(attribute='id', reverse=True) %}
+        <li class="record-item">
+            <div class="icon-block {{ record.type }}">
+                <span>{{ record.category[0] }}</span>
+            </div>
+            <div class="info-block">
+                <p class="category">{{ record.category }}</p>
+                <p class="description">{{ record.description or '...' }}</p>
+            </div>
+            <div class="amount-block">
+                <p class="amount {{ record.type }}">
+                    {{ '+' if record.type == 'income' else '-' }}¥{{ '%.2f'|format(record.amount) }}
+                </p>
+                <div class="actions">
+                    <a href="{{ url_for('edit_record', record_id=record.id) }}">编辑</a>
+                    <form action="{{ url_for('delete_record', record_id=record.id) }}" method="post" class="delete-form" data-message="确定删除这条记录吗?">
+                        <button type="submit">删除</button>
+                    </form>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    {% endif %}
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}{% endblock %} - 阳光记账</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <!-- 全新的侧边抽屉导航 -->
+    <aside class="side-nav">
+        <div class="nav-header">
+            <h3>阳光记账</h3>
+            <span class="version">v3.0</span>
+        </div>
+        <nav class="nav-menu">
+            <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                <span class="icon">💻</span><span>仪表盘</span>
+            </a>
+            <a href="{{ url_for('records') }}" class="nav-link {% if request.endpoint == 'records' %}active{% endif %}">
+                <span class="icon">📂</span><span>详细流水</span>
+            </a>
+            <a href="{{ url_for('annual_report') }}" class="nav-link {% if request.endpoint == 'annual_report' %}active{% endif %}">
+                <span class="icon">📈</span><span>年度报告</span>
+            </a>
+            <a href="{{ url_for('settings') }}" class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}">
+                <span class="icon">⚙️</span><span>系统设置</span>
+            </a>
+        </nav>
+        <div class="nav-footer">
+            &copy; {{ current_year }}
+        </div>
+    </aside>
+
+    <!-- 导航菜单打开时的背景遮罩 -->
+    <div class="nav-overlay"></div>
+    
+    <!-- 页面主容器 -->
+    <div class="page-wrapper">
+        <header class="main-header">
+            <button class="menu-toggle" aria-label="Toggle Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+             <a href="{{ url_for('add_form') }}" class="add-record-button">+</a>
+        </header>
+
+        <main class="content-area">
+             {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div id="flash-container-mobile" style="display: none;">
+                        {% for category, message in messages %}
+                            <div data-category="{{ category }}" data-message="{{ message }}"></div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/mobile.js') }}"></script>
+</body>
+</html>
