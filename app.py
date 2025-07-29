@@ -379,4 +379,4 @@ def annual_report():
 # --- 主程序入口 ---
 if __name__ == '__main__':
     # load_data() 函数内部已包含目录检查，这里不再需要
-    app.run(debug=True, port=5001)
+    app.run(host='0.0.0.0', port=5000, debug=True)
