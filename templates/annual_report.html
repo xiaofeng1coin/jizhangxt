@@ -1,0 +1,142 @@
+{# This file remains the same as the modern version you already have #}
+{% extends 'layout.html' %}
+{% block title %}年度报告 - 阳光记账{% endblock %}
+{% block head_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/history.css') }}">{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <!-- 1. 页面头部 -->
+    <header class="report-header">
+        <h1>{{ selected_year }} 年度财务报告</h1>
+        <form id="year-selector-form" method="get" action="{{ url_for('annual_report') }}">
+            <label for="year-select">选择年份:</label>
+            <select name="year" id="year-select" onchange="this.form.submit();">
+                {% if not all_years %}<option>{{ selected_year }}</option>{% endif %}
+                {% for year in all_years %}
+                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}年</option>
+                {% endfor %}
+            </select>
+        </form>
+    </header>
+
+    {% if selected_year and (total_income > 0 or total_expense > 0) %}
+
+    <!-- 2. 关键指标概览 -->
+    <section class="summary-grid">
+        <div class="summary-card income">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+            </div>
+            <div class="text">
+                <p class="label">年度总收入</p>
+                <p class="value">¥ {{ '%.2f'|format(total_income) }}</p>
+            </div>
+        </div>
+        <div class="summary-card expense">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+            </div>
+            <div class="text">
+                <p class="label">年度总支出</p>
+                <p class="value">¥ {{ '%.2f'|format(total_expense) }}</p>
+            </div>
+        </div>
+        <div class="summary-card balance">
+            <div class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5h-4a2 2 0 0 1 0-4h4V5Z"></path></svg>
+            </div>
+            <div class="text">
+                <p class="label">年度净结余</p>
+                <p class="value">¥ {{ '%.2f'|format(total_balance) }}</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. 主内容区域 (图表 + 摘要/排行) -->
+    <main class="main-grid">
+        <!-- 3.1 图表卡片 -->
+        <article class="card chart-card">
+            <h3>月度收支趋势</h3>
+            <div class="chart-wrapper">
+                <canvas id="trendsChart"></canvas>
+            </div>
+        </article>
+
+        <!-- 3.2 侧边信息栏 -->
+        <aside class="side-panel">
+            <article class="card ai-summary-card">
+                <h3><span class="icon-sparkle">✨</span> 智能财务摘要</h3>
+                <p>{{ ai_summary }}</p>
+            </article>
+
+            <article class="card top-categories-card">
+                <h3>Top 5 支出类别</h3>
+                {% if top_expense_categories %}
+                <ol>
+                    {% for cat, amount in top_expense_categories %}
+                    <li>
+                        <span class="category-name">{{ cat }}</span>
+                        <span class="category-amount">- ¥ {{ '%.2f'|format(amount) }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <p class="no-data-list">无支出分类数据</p>
+                {% endif %}
+            </article>
+        </aside>
+    </main>
+
+    {% else %}
+    <!-- 4. 无数据时的提示页面 -->
+    <div class="no-data-report">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+        <h2>该年度无数据</h2>
+        <p>请尝试选择其他年份，或 <a href="{{ url_for('index') }}">返回首页开始记账</a>。</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if selected_year and (total_income > 0 or total_expense > 0) %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const trendsCtx = document.getElementById('trendsChart');
+    if (!trendsCtx) return;
+
+    Chart.defaults.font.family = "Noto Sans SC, sans-serif";
+    Chart.defaults.color = '#555';
+
+    const monthlyTrends = {{ monthly_trends|tojson|safe }};
+    const labels = Object.keys(monthlyTrends).sort();
+    const incomeData = labels.map(label => monthlyTrends[label].income || 0);
+    const expenseData = labels.map(label => monthlyTrends[label].expense || 0);
+
+    new Chart(trendsCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '收入',
+                data: incomeData,
+                backgroundColor: 'rgba(28, 177, 69, 0.7)',
+                borderColor: 'rgba(28, 177, 69, 1)',
+                borderRadius: 4, borderWidth: 1
+            }, {
+                label: '支出',
+                data: expenseData,
+                backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                borderColor: 'rgba(239, 68, 68, 1)',
+                borderRadius: 4, borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true }, x: { grid: { display: false } } },
+            plugins: { legend: { position: 'top', align: 'end' }, tooltip: { /* ... */ } }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

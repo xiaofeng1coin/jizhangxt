@@ -1,0 +1,96 @@
+/* 【重构】集成式标题卡片 */
+.page-header-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1.5rem 2rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* 允许在小屏幕上换行 */
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.header-content h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color);
+}
+.header-content p {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin: 0.25rem 0 0;
+}
+
+/* 日期选择表单样式 */
+.date-selector-form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: var(--gray-100);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+}
+
+.date-selector-form label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+}
+
+.date-selector-form input[type="date"] {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+    background-color: #fff;
+    /* 取消全局输入框的100%宽度，使其自适应内容 */
+    width: auto;
+}
+
+
+/* --- 以下为原有样式，保持不变 --- */
+/* Records Grid Layout */
+.records-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+@media (max-width: 992px) { .records-grid { grid-template-columns: 1fr; } }
+
+/* Records Card */
+.records-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.card-header h3 { margin: 0; font-size: 1.3rem; }
+.card-header .total-amount { font-size: 1.2rem; font-weight: 600; }
+.records-card .expense h3 { color: var(--expense-color); }
+.records-card .income h3 { color: var(--income-color); }
+
+.records-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.records-list li { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-radius: 8px; transition: background-color 0.2s; }
+.records-list li:hover { background-color: var(--gray-100); }
+.records-list li:not(:last-child){ border-bottom: 1px solid var(--gray-100); }
+
+.record-info { display: flex; flex-direction: column; gap: 0.1rem; flex-grow: 1; }
+.record-category { font-weight: 500; font-size: 1rem; }
+.record-description { font-size: 0.85rem; color: var(--text-muted); }
+
+.record-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.record-amount { font-weight: 500; min-width: 80px; text-align: right; }
+.btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0.25rem; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s, color 0.2s; text-decoration: none; }
+.btn-edit { color: var(--gray-700); }
+.btn-edit:hover { background-color: var(--yellow-400); color: #fff;}
+.btn-delete { color: var(--gray-700); line-height: 1; font-size: 1.5rem;}
+.btn-delete:hover { background-color: var(--expense-color); color: #fff; }
+.delete-form { display: inline-flex; }
+
+.no-data { text-align: center; padding: 3rem 0; color: var(--text-muted); font-weight: 500; }

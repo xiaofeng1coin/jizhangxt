@@ -1,0 +1,55 @@
+{% extends 'mobile/layout.html' %}
+{% block title %}详细流水 - 阳光记账{% endblock %}
+{% block page_title %}详细流水{% endblock %}
+
+{% block content %}
+<div class="date-selector-mobile">
+    <form method="get" action="{{ url_for('records') }}">
+        <input type="date" name="selected_date" value="{{ selected_date }}" onchange="this.form.submit()">
+    </form>
+</div>
+
+<div class="daily-summary-mobile">
+    <div class="summary-item">
+        <span>总收入</span>
+        <strong class="income">+ ¥{{ '%.2f'|format(daily_income_total) }}</strong>
+    </div>
+    <div class="summary-item">
+        <span>总支出</span>
+        <strong class="expense">- ¥{{ '%.2f'|format(daily_expense_total) }}</strong>
+    </div>
+</div>
+
+<div class="records-list-mobile">
+    {% if not expense_records and not income_records %}
+        <div class="no-data-placeholder">
+            <p>当日无任何记录</p>
+        </div>
+    {% else %}
+        {% for record in expense_records + income_records %}
+        <div class="record-item-mobile">
+            <div class="record-icon">
+                <span>{{ record.category[0] }}</span>
+            </div>
+            <div class="record-details">
+                <div class="row-1">
+                    <span class="category">{{ record.category }}</span>
+                    <span class="amount {{ record.type }}">
+                        {{ '+' if record.type == 'income' else '-' }}¥{{ '%.2f'|format(record.amount) }}
+                    </span>
+                </div>
+                <div class="row-2">
+                    <span class="description">{{ record.description or '...' }}</span>
+                    <div class="actions">
+                        <a href="{{ url_for('edit_record', record_id=record.id) }}" class="action-btn">编辑</a>
+                        <form action="{{ url_for('delete_record', record_id=record.id) }}" method="post" class="delete-form" data-message="确定删除这条记录吗?">
+                           <button type="submit" class="action-btn delete">删除</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

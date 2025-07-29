@@ -1,0 +1,79 @@
+{% extends 'layout.html' %}
+{% block title %}详细流水 - 阳光记账{% endblock %}
+{% block head_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/records.css') }}">{% endblock %}
+
+{% block content %}
+<!-- 【重构】集成式标题卡片 -->
+<header class="page-header-card">
+    <div class="header-content">
+        <h1>详细流水</h1>
+        <p>查看指定日期的收支明细。</p>
+    </div>
+    <form class="date-selector-form" method="get" action="{{ url_for('records') }}">
+        <label for="date-picker">选择日期</label>
+        <input type="date" id="date-picker" name="selected_date" value="{{ selected_date }}" onchange="this.form.submit()">
+    </form>
+</header>
+
+<div class="records-grid">
+    <!-- 支出板块 -->
+    <div class="card records-card">
+        <div class="card-header">
+            <h3>当日支出</h3>
+            <span class="total-amount expense">- ¥ {{ '%.2f'|format(daily_expense_total) }}</span>
+        </div>
+        <ul class="records-list">
+            {% for record in expense_records %}
+            <li>
+                <div class="record-info">
+                    <span class="record-category">{{ record.category }}</span>
+                    <span class="record-description">{{ record.description or '...' }}</span>
+                </div>
+                <div class="record-actions">
+                    <span class="record-amount expense">-¥{{ '%.2f'|format(record.amount) }}</span>
+                    <a href="{{ url_for('edit_record', record_id=record.id) }}" class="btn-icon btn-edit" title="编辑">&#9998;</a>
+                    <!-- 【核心修改】添加 class 和 data-* 属性 -->
+                    <form action="{{ url_for('delete_record', record_id=record.id) }}" method="post" class="delete-form" style="display:inline;"
+                          data-message="您确定要删除这条记录吗？"
+                          data-detail="类别: {{ record.category }}, 金额: ¥{{ '%.2f'|format(record.amount) }}. 此操作无法撤销。">
+                        <button type="submit" class="btn-icon btn-delete" title="删除">&times;</button>
+                    </form>
+                </div>
+            </li>
+            {% else %}
+            <li class="no-data"><p>今日无支出记录</p></li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- 收入板块 -->
+    <div class="card records-card">
+        <div class="card-header">
+            <h3>当日收入</h3>
+            <span class="total-amount income">+ ¥ {{ '%.2f'|format(daily_income_total) }}</span>
+        </div>
+        <ul class="records-list">
+            {% for record in income_records %}
+            <li>
+                <div class="record-info">
+                    <span class="record-category">{{ record.category }}</span>
+                    <span class="record-description">{{ record.description or '...' }}</span>
+                </div>
+                <div class="record-actions">
+                    <span class="record-amount income">+¥{{ '%.2f'|format(record.amount) }}</span>
+                    <a href="{{ url_for('edit_record', record_id=record.id) }}" class="btn-icon btn-edit" title="编辑">&#9998;</a>
+                    <!-- 【核心修改】添加 class 和 data-* 属性 -->
+                    <form action="{{ url_for('delete_record', record_id=record.id) }}" method="post" class="delete-form" style="display:inline;"
+                          data-message="您确定要删除这条记录吗？"
+                          data-detail="类别: {{ record.category }}, 金额: ¥{{ '%.2f'|format(record.amount) }}. 此操作无法撤销。">
+                        <button type="submit" class="btn-icon btn-delete" title="删除">&times;</button>
+                    </form>
+                </div>
+            </li>
+            {% else %}
+            <li class="no-data"><p>今日无收入记录</p></li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

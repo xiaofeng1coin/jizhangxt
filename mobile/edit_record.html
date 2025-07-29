@@ -1,0 +1,80 @@
+{% extends 'mobile/layout.html' %}
+{% block title %}编辑记录 - 阳光记账{% endblock %}
+{% block page_title %}编辑记录{% endblock %}
+
+{% block content %}
+<div class="edit-form-mobile-container">
+    <form action="{{ url_for('edit_record', record_id=record.id) }}" method="post" id="edit-record-form-mobile">
+
+        <!-- Type Selector -->
+        <div class="form-group-mobile">
+            <label>类型</label>
+            <div class="type-selector-mobile">
+                <input type="radio" id="type_expense_edit" name="type" value="expense" {% if record.type == 'expense' %}checked{% endif %}>
+                <label for="type_expense_edit">支出</label>
+                <input type="radio" id="type_income_edit" name="type" value="income" {% if record.type == 'income' %}checked{% endif %}>
+                <label for="type_income_edit">收入</label>
+            </div>
+        </div>
+
+        <!-- Amount -->
+        <div class="form-group-mobile">
+            <label for="amount">金额</label>
+            <div class="input-with-prefix">
+                <span>¥</span>
+                <input type="number" id="amount" step="0.01" name="amount" value="{{ record.amount }}" required>
+            </div>
+        </div>
+
+        <!-- Category -->
+        <div class="form-group-mobile">
+            <label for="category-input-edit">类别</label>
+            <input type="text" id="category-input-edit" name="category" value="{{ record.category }}" required list="expense-categories-list-edit" autocomplete="off">
+             <datalist id="expense-categories-list-edit">
+                {% for cat in expense_categories %}<option value="{{ cat }}">{% endfor %}
+            </datalist>
+            <datalist id="income-categories-list-edit">
+                {% for cat in income_categories %}<option value="{{ cat }}">{% endfor %}
+            </datalist>
+        </div>
+
+        <!-- Date -->
+        <div class="form-group-mobile">
+            <label for="date">日期</label>
+            <input type="date" id="date" name="date" value="{{ record.date }}">
+        </div>
+
+        <!-- Description -->
+        <div class="form-group-mobile">
+            <label for="description">备注 (可选)</label>
+            <input type="text" id="description" name="description" value="{{ record.description }}" placeholder="写点什么...">
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions-mobile">
+            <button type="submit" class="btn-submit-mobile">保存更改</button>
+            <a href="{{ request.referrer or url_for('records') }}" class="btn-secondary-mobile">取消</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Logic to switch category datalist based on type
+document.addEventListener('DOMContentLoaded', function() {
+    const typeExpenseRadio = document.getElementById('type_expense_edit');
+    const typeIncomeRadio = document.getElementById('type_income_edit');
+    const categoryInput = document.getElementById('category-input-edit');
+
+    function updateCategoryDatalist() {
+        if (typeExpenseRadio.checked) {
+            categoryInput.setAttribute('list', 'expense-categories-list-edit');
+        } else {
+            categoryInput.setAttribute('list', 'income-categories-list-edit');
+        }
+    }
+    typeExpenseRadio.addEventListener('change', updateCategoryDatalist);
+    typeIncomeRadio.addEventListener('change', updateCategoryDatalist);
+    updateCategoryDatalist(); // Initial check on page load
+});
+</script>
+{% endblock %}

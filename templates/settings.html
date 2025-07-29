@@ -1,0 +1,84 @@
+{% extends 'layout.html' %}
+{% block title %}设置 - 阳光记账{% endblock %}
+{% block head_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">{% endblock %}
+
+{% block content %}
+<section class="settings-section">
+    <h1>设置中心</h1>
+    <div class="settings-grid">
+        <!-- 类别管理 -->
+        <div class="settings-card">
+            <h2>类别管理</h2>
+            <div class="category-management">
+                <!-- 支出类别 -->
+                <div class="category-column">
+                    <h3>支出类别</h3>
+                    <ul class="category-list">
+                        {% for cat in categories.expense %}
+                        <li>
+                            <span>{{ cat }}</span>
+                            <!-- 【核心修改】添加 class 和 data-* 属性 -->
+                            <form action="{{ url_for('delete_category') }}" method="post" class="delete-form"
+                                  data-message="确定要删除支出类别 '{{ cat }}' 吗？"
+                                  data-detail="删除后，相关的预算设置也会被移除。此操作无法撤销。">
+                                <input type="hidden" name="type" value="expense">
+                                <input type="hidden" name="category" value="{{ cat }}">
+                                <button type="submit" class="btn-delete-sm" title="删除类别">&times;</button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <form action="{{ url_for('add_category') }}" method="post" class="add-category-form">
+                        <input type="hidden" name="type" value="expense">
+                        <input type="text" name="new_category" placeholder="新增支出类别" required>
+                        <button type="submit">+</button>
+                    </form>
+                </div>
+                <!-- 收入类别 -->
+                <div class="category-column">
+                    <h3>收入类别</h3>
+                    <ul class="category-list">
+                         {% for cat in categories.income %}
+                        <li>
+                            <span>{{ cat }}</span>
+                             <!-- 【核心修改】添加 class 和 data-* 属性 -->
+                             <form action="{{ url_for('delete_category') }}" method="post" class="delete-form"
+                                   data-message="确定要删除收入类别 '{{ cat }}' 吗？"
+                                   data-detail="此操作无法撤销。">
+                                <input type="hidden" name="type" value="income">
+                                <input type="hidden" name="category" value="{{ cat }}">
+                                <button type="submit" class="btn-delete-sm" title="删除类别">&times;</button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                     <form action="{{ url_for('add_category') }}" method="post" class="add-category-form">
+                        <input type="hidden" name="type" value="income">
+                        <input type="text" name="new_category" placeholder="新增收入类别" required>
+                        <button type="submit">+</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 预算设置 -->
+        <div class="settings-card">
+             <h2>月度预算设置 (仅支出)</h2>
+             <form action="{{ url_for('settings') }}" method="post">
+                <ul class="budget-list">
+                    {% for cat in categories.expense %}
+                    <li>
+                        <label for="budget_{{ cat }}">{{ cat }}</label>
+                        <div class="budget-input">
+                            <span>¥</span>
+                            <input type="number" step="0.01" min="0" id="budget_{{ cat }}" name="budget_{{ cat }}" value="{{ budgets[cat]|default('', true) }}" placeholder="0.00">
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <button type="submit" class="btn-submit">保存预算</button>
+             </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

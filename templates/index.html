@@ -1,0 +1,114 @@
+{% extends 'layout.html' %}
+{% block title %}仪表盘 - 阳光记账{% endblock %}
+{% block head_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">{% endblock %}
+
+{% block content %}
+<section class="summary-cards">
+    <div class="summary-card">
+        <h4>今日收支</h4>
+        <p class="income">+ ¥ {{ '%.2f'|format(daily_income) }}</p>
+        <p class="expense">- ¥ {{ '%.2f'|format(daily_expense) }}</p>
+    </div>
+    <div class="summary-card">
+        <h4>本月收支</h4>
+        <p class="income">+ ¥ {{ '%.2f'|format(monthly_income_total) }}</p>
+        <p class="expense">- ¥ {{ '%.2f'|format(monthly_expense_total) }}</p>
+    </div>
+    <div class="summary-card">
+        <h4>本月结余</h4>
+        <p class="balance">¥ {{ '%.2f'|format(monthly_savings) }}</p>
+        <span class="muted-text"> Keep it up! </span>
+    </div>
+</section>
+
+<section class="main-grid">
+    <div class="card add-record-card">
+        <h3>快捷记账</h3>
+        <form action="{{ url_for('add_record') }}" method="post" id="add-record-form">
+            <div class="form-group type-selector">
+                <input type="radio" id="type_expense" name="type" value="expense" checked>
+                <label for="type_expense">支出</label>
+                <input type="radio" id="type_income" name="type" value="income">
+                <label for="type_income">收入</label>
+            </div>
+            <div class="form-group">
+                <input type="number" step="0.01" name="amount" placeholder="¥ 0.00" required>
+            </div>
+            <div class="form-group">
+                <input type="text" id="category-input" name="category" placeholder="选择或输入支出类别" required list="expense-categories-list" autocomplete="off">
+                <datalist id="expense-categories-list">
+                    {% for cat in default_expense_categories %}<option value="{{ cat }}">{% endfor %}
+                </datalist>
+                <datalist id="income-categories-list">
+                    {% for cat in default_income_categories %}<option value="{{ cat }}">{% endfor %}
+                </datalist>
+            </div>
+            <div class="form-group">
+                  <input type="date" id="date" name="date" value="{{ today_for_form }}">
+            </div>
+            <div class="form-group">
+                <input type="text" name="description" placeholder="写点备注... (可选)">
+            </div>
+            <button type="submit" class="btn-submit">记一笔</button>
+        </form>
+    </div>
+
+    <div class="card budget-card">
+        <h3>本月预算进度</h3>
+        {% if total_budget > 0 %}
+            <div class="overall-budget">
+                <div class="progress-bar-info">
+                    <span>总支出 / 总预算</span>
+                    <span>¥{{ '%.2f'|format(monthly_expense_total) }} / ¥{{ '%.2f'|format(total_budget) }}</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" style="width: {{ overall_budget_progress }}%;"></div>
+                </div>
+            </div>
+            <div class="category-budgets-list">
+                {% for category, data in budget_progress.items() %}
+                    {% if data.budget > 0 %}
+                    <div class="budget-item">
+                        <div class="budget-item-info">
+                            <span class="category-name">{{ category }}</span>
+                            <span class="amount {% if data.overspent %}overspent{% endif %}">
+                                ¥{{ '%.2f'|format(data.spent) }} / ¥{{ '%.2f'|format(data.budget) }}
+                            </span>
+                        </div>
+                        <div class="progress-bar-container small">
+                            <div class="progress-bar {% if data.overspent %}overspent-bar{% endif %}" style="width: {{ data.progress }}%;"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+             <div class="no-data-placeholder">
+                <p>还没有设置预算哦</p>
+                <a href="{{ url_for('settings') }}" class="btn-secondary">去设置预算</a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeExpenseRadio = document.getElementById('type_expense');
+    const typeIncomeRadio = document.getElementById('type_income');
+    const categoryInput = document.getElementById('category-input');
+
+    function updateCategoryInput() {
+        if (typeExpenseRadio.checked) {
+            categoryInput.setAttribute('list', 'expense-categories-list');
+            categoryInput.placeholder = "选择或输入支出类别";
+        } else {
+            categoryInput.setAttribute('list', 'income-categories-list');
+            categoryInput.placeholder = "选择或输入收入类别";
+        }
+        categoryInput.value = '';
+    }
+    typeExpenseRadio.addEventListener('change', updateCategoryInput);
+    typeIncomeRadio.addEventListener('change', updateCategoryInput);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'mobile/layout.html' %}
+{% block title %}概览 - 阳光记账{% endblock %}
+{% block page_title %}概览{% endblock %}
+
+{% block content %}
+<div class="summary-section">
+    <div class="summary-period">
+        <h4>本月收支</h4>
+        <div class="monthly-summary">
+            <div class="income">
+                <span>收入</span>
+                <p>+ ¥{{ '%.2f'|format(monthly_income_total) }}</p>
+            </div>
+            <div class="expense">
+                <span>支出</span>
+                <p>- ¥{{ '%.2f'|format(monthly_expense_total) }}</p>
+            </div>
+            <div class="balance">
+                <span>结余</span>
+                <p>¥{{ '%.2f'|format(monthly_savings) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="budget-section">
+    <h3>本月预算</h3>
+    {% if total_budget > 0 %}
+        <div class="overall-budget-mobile">
+            <div class="progress-bar-info">
+                <span>总进度</span>
+                <span>¥{{ '%.2f'|format(monthly_expense_total) }}/¥{{ '%.2f'|format(total_budget) }}</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: {{ overall_budget_progress }}%;"></div>
+            </div>
+        </div>
+        <div class="category-budgets-list-mobile">
+            {% for category, data in budget_progress.items() %}
+                <div class="budget-item-mobile">
+                    <div class="budget-item-info">
+                        <span class="category-name">{{ category }}</span>
+                        <span class="amount {% if data.overspent %}overspent{% endif %}">
+                            ¥{{ '%.2f'|format(data.spent) }} / ¥{{ '%.2f'|format(data.budget) }}
+                        </span>
+                    </div>
+                    <div class="progress-bar-container small">
+                        <div class="progress-bar {% if data.overspent %}overspent-bar{% endif %}" style="width:{{ data.progress }}%;"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-data-placeholder">
+            <p>还没有设置预算哦</p>
+            <a href="{{ url_for('settings') }}" class="btn-secondary-mobile">去设置</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

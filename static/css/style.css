@@ -1,0 +1,124 @@
+:root {
+    --blue-500: #3b82f6;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --green-500: #22c55e;
+    --red-500: #ef4444;
+    --yellow-400: #facc15;
+
+    --font-family: 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --primary-color: var(--blue-500);
+    --background-color: var(--gray-50);
+    --card-bg: #ffffff;
+    --text-color: var(--gray-800);
+    --text-muted: var(--gray-400);
+    --border-color: var(--gray-200);
+    --income-color: var(--green-500);
+    --expense-color: var(--red-500);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 8px -2px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.06);
+    --border-radius: 12px;
+}
+
+/* Base Styles */
+body {
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
+.page-content { padding-top: 2rem; padding-bottom: 3rem; }
+.card { background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow); padding: 1.5rem; }
+.page-header { text-align: center; margin-bottom: 2rem; }
+.page-header h1 { font-size: 2.25rem; font-weight: 700; margin: 0; }
+.page-header p { font-size: 1.1rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+/* Navbar */
+.navbar { background: var(--card-bg); padding: 1rem 0; position: sticky; top: 0; z-index: 1000; box-shadow: var(--shadow); }
+.navbar-content { display: flex; justify-content: space-between; align-items: center; }
+.nav-logo { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: var(--text-color); font-size: 1.25rem; font-weight: 600; }
+.nav-menu { display: flex; gap: 0.5rem; align-items: center; }
+.nav-link { text-decoration: none; color: var(--gray-700); font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: background-color 0.2s, color 0.2s; }
+.nav-link:hover { background-color: var(--gray-100); color: var(--primary-color); }
+.nav-link.active { background-color: var(--primary-color); color: #fff; }
+
+/* Forms & Buttons */
+.form-group { margin-bottom: 1rem; }
+input[type="text"], input[type="number"], input[type="date"], input[type="search"] {
+    width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); outline: none; }
+
+.btn-submit { display: block; width: 100%; padding: 0.8rem; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; text-decoration: none; text-align: center; }
+.btn-submit:hover { background-color: #2563eb; }
+
+.btn-secondary { display: inline-block; padding: 0.8rem 1.2rem; background-color: var(--gray-200); color: var(--gray-800); text-decoration: none; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; transition: background-color 0.2s; }
+.btn-secondary:hover { background-color: #d1d5db; }
+
+.btn-cancel { display: block; width: 100%; margin-top: 0.75rem; padding: 0.8rem; background: var(--gray-100); color: var(--gray-700); text-align: center; text-decoration: none; border-radius: 8px; font-weight: 500; transition: background-color 0.2s ease; }
+.btn-cancel:hover { background-color: var(--gray-200); }
+
+/* Flash Messages */
+.flash-messages { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.flash { padding: 1rem; border-radius: var(--border-radius); text-align: center; font-weight: 500; }
+.flash-success { background-color: #d1fae5; color: #047857; }
+.flash-error { background-color: #fee2e2; color: #b91c1c; }
+
+/* Footer */
+.site-footer { text-align: center; padding: 2rem 0; margin-top: 2rem; border-top: 1px solid var(--border-color); color: var(--text-muted); }
+.export-link { color: var(--primary-color); text-decoration: none; font-weight: 500; }
+.export-link:hover { text-decoration: underline; }
+
+/* Utility */
+.income { color: var(--income-color); }
+.expense { color: var(--expense-color); }
+.balance { color: var(--primary-color); }
+.muted-text { font-size: 0.9rem; color: var(--text-muted); }
+
+/* --- 【新增】SweetAlert2 样式覆盖 --- */
+/* 调整弹窗大小和内边距 */
+.swal2-popup {
+    width: 90% !important; /* 在小屏幕上响应式 */
+    max-width: 480px !important; /* 最大宽度 */
+    padding: 1.5rem !important;
+}
+
+/* 调整标题字体大小和颜色 */
+.swal2-title {
+    font-size: 1.5rem !important;
+    color: var(--text-color);
+}
+
+/* 调整内容文字样式 */
+.swal2-html-container {
+    font-size: 1rem !important;
+    color: var(--text-muted);
+    margin-top: 1rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* 调整按钮区域的间距 */
+.swal2-actions {
+    gap: 1rem !important; /* 增加按钮之间的间距 */
+}
+
+/* 确保我们自定义的按钮样式完全生效 */
+.swal2-actions .btn-submit,
+.swal2-actions .btn-secondary {
+    width: auto; /* 取消100%宽度 */
+    min-width: 100px; /* 给按钮一个最小宽度 */
+    font-size: 1rem; /* 统一字体大小 */
+}
+
+/* 我们使用 .btn-secondary 作为取消按钮，这里确保它有合适的内边距 */
+.swal2-actions .btn-secondary {
+    padding: 0.8rem 1.2rem;
+}

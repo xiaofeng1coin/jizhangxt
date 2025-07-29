@@ -1,0 +1,239 @@
+/* --- 全局及通用样式 --- */
+:root {
+    --card-bg: #ffffff;
+    --page-bg: #f8f9fa;
+    --text-color: #343a40;
+    --text-muted: #6c757d;
+    --border-color: #dee2e6;
+    --border-radius: 12px;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --income-color: #1cb145;
+    --expense-color: #ef4444;
+    --balance-color: #3b82f6;
+}
+
+body.dark-mode {
+    --card-bg: #2d3748;
+    --page-bg: #1a202c;
+    --text-color: #e2e8f0;
+    --text-muted: #a0aec0;
+    --border-color: #4a5568;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* --- 新版年度报告样式 --- */
+.report-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* 1. 报告头部 */
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.report-header h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.report-header form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-header label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.report-header select {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.report-header select:hover {
+    border-color: var(--balance-color);
+}
+
+/* 2. 概览指标网格 */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.summary-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    border-left: 5px solid;
+}
+
+.summary-card.income { border-color: var(--income-color); }
+.summary-card.expense { border-color: var(--expense-color); }
+.summary-card.balance { border-color: var(--balance-color); }
+
+.summary-card .icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.summary-card .icon svg { color: #fff; }
+.summary-card.income .icon { background-color: var(--income-color);}
+.summary-card.expense .icon { background-color: var(--expense-color); }
+.summary-card.balance .icon { background-color: var(--balance-color); }
+
+.summary-card .text .label {
+    margin: 0 0 0.25rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+.summary-card .text .value {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* 3. 主网格布局 */
+.main-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
+/* 通用卡片样式 */
+.card {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+}
+.card h3 {
+    margin: 0 0 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.card p {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* 3.1 图表卡片 (核心修复) */
+.chart-card {
+    min-height: 450px; /* 给卡片一个最小高度 */
+}
+.chart-wrapper {
+    position: relative;
+    flex-grow: 1; /* 关键：让包装器填满卡片中的所有剩余空间 */
+}
+
+/* 3.2 侧边栏 */
+.side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Top 5 分类列表 */
+.top-categories-card ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.top-categories-card li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.top-categories-card li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.category-name {
+    color: var(--text-color);
+}
+.category-amount {
+    color: var(--expense-color);
+    font-weight: 500;
+}
+.no-data-list {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+/* 4. 无数据状态 */
+.no-data-report {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 4rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+.no-data-report svg {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+.no-data-report h2 { color: var(--text-color); font-weight: 600; }
+.no-data-report p { color: var(--text-muted); }
+.no-data-report a { color: var(--balance-color); text-decoration: none; }
+.no-data-report a:hover { text-decoration: underline; }
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+    .main-grid {
+        grid-template-columns: 1fr; /* 桌面端并排，中等屏幕变单列 */
+    }
+}
+@media (max-width: 768px) {
+    .report-container {
+        margin: 1rem auto;
+    }
+    .report-header h1 {
+        font-size: 1.5rem;
+    }
+    .summary-card, .card {
+        padding: 1rem;
+    }
+}
+

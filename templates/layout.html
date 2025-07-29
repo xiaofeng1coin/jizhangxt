@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}阳光记账{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- 【修改】从CDN改为本地路径 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block head_css %}{% endblock %}
+</head>
+<body>
+    <header class="navbar">
+        <div class="container navbar-content">
+            <a href="{{ url_for('index') }}" class="nav-logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" fill="#FFC107"></path><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10ZM4 12a8 8 0 1 0 16 0 8 8 0 0 0-16 0Z" fill="#333"></path></svg>
+                <span>阳光记账</span>
+            </a>
+            <nav class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">仪表盘</a>
+                <a href="{{ url_for('records') }}" class="nav-link {% if request.endpoint == 'records' %}active{% endif %}">详细流水</a>
+                <a href="{{ url_for('annual_report') }}" class="nav-link {% if request.endpoint == 'annual_report' %}active{% endif %}">年度报告</a>
+                <a href="{{ url_for('settings') }}" class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}">设置中心</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container page-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; {{ current_year }} 阳光记账系统. Created with ❤️.</p>
+            <a href="{{ url_for('export_csv') }}" class="export-link">导出全部数据 (CSV)</a>
+        </div>
+    </footer>
+
+    <!-- 【修改】从CDN改为本地路径 -->
+     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- 【新增】引入我们自己的主JS文件 -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

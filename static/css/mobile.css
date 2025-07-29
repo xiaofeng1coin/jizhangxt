@@ -1,0 +1,399 @@
+/* static/css/mobile.css */
+:root {
+    --bg-color: #f4f6f9;
+    --card-bg: #ffffff;
+    --text-primary: #1a202c;
+    --text-secondary: #6c757d;
+    --primary-color: #3b82f6;
+    --green-color: #1cb145;
+    --red-color: #ef4444;
+    --border-color: #e5e7eb;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --font-family: 'Noto Sans SC', sans-serif;
+    --bottom-nav-height: 65px;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    padding-bottom: var(--bottom-nav-height); /* 为底部导航留出空间 */
+}
+
+/* --- Layout & Header --- */
+.mobile-header {
+    background: var(--card-bg);
+    padding: 1rem 1.25rem;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.mobile-header h1 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0;
+}
+.mobile-content {
+    padding: 1rem;
+}
+
+/* --- Bottom Navigation --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--bottom-nav-height);
+    background-color: var(--card-bg);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    z-index: 1000;
+}
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    flex-grow: 1;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+.nav-item .icon { font-size: 1.5rem; }
+.nav-item.active { color: var(--primary-color); }
+.nav-item.add-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    margin-top: -30px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+.nav-item.add-btn .icon { font-size: 2rem; line-height: 1; }
+
+/* --- General Components --- */
+.card-mobile {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+}
+.no-data-placeholder {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-secondary);
+}
+.income { color: var(--green-color); }
+.expense { color: var(--red-color); }
+
+/* --- Index Page --- */
+.summary-section, .budget-section {
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+.summary-section h4, .budget-section h3 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+}
+.monthly-summary { display: flex; justify-content: space-between; text-align: center; }
+.monthly-summary > div { flex: 1; }
+.monthly-summary span { font-size: 0.8rem; color: var(--text-secondary); }
+.monthly-summary p { font-size: 1.1rem; font-weight: bold; margin: 0.25rem 0 0; }
+.overall-budget-mobile .progress-bar-info, .budget-item-info { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.25rem; }
+.progress-bar-container { background: #e5e7eb; border-radius: 99px; height: 8px; overflow: hidden; margin-top: 4px;}
+.progress-bar { background: var(--primary-color); height: 100%; }
+.progress-bar.overspent-bar { background-color: var(--red-color); }
+.category-budgets-list-mobile .budget-item-mobile { margin-top: 1rem; }
+.budget-item-info .amount.overspent { color: var(--red-color); font-weight: bold; }
+
+/* --- Records Page --- */
+.date-selector-mobile { margin-bottom: 1rem; }
+.date-selector-mobile input[type="date"] {
+    width: 100%; padding: 0.75rem; border: 1px solid var(--border-color);
+    border-radius: 8px; background: var(--card-bg); text-align: center; font-weight: 500;
+}
+.daily-summary-mobile { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.daily-summary-mobile .summary-item {
+    flex: 1; background: var(--card-bg); padding: 0.75rem;
+    border-radius: 8px; text-align: center;
+}
+.daily-summary-mobile span { font-size: 0.8rem; color: var(--text-secondary); }
+.daily-summary-mobile strong { display: block; font-size: 1rem; margin-top: 4px; }
+.records-list-mobile .record-item-mobile {
+    display: flex; align-items: center; gap: 1rem;
+    background: var(--card-bg); padding: 1rem;
+    border-radius: 12px; margin-bottom: 0.75rem;
+}
+.record-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    background-color: #eef2ff; color: var(--primary-color);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; flex-shrink: 0;
+}
+.record-details { flex-grow: 1; }
+.record-details .row-1, .record-details .row-2 { display: flex; justify-content: space-between; align-items: center; }
+.record-details .category { font-weight: 500; }
+.record-details .amount { font-weight: bold; }
+.record-details .description { font-size: 0.8rem; color: var(--text-secondary); }
+.record-details .actions { display:flex; gap:0.5rem; }
+.record-details .action-btn { font-size: 0.8rem; color: var(--text-secondary); background: none; border: none; padding: 0; cursor: pointer; text-decoration: none; }
+.action-btn.delete { color: var(--red-color); }
+
+/* --- Add Record Form Overlay --- */
+.add-record-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    display: none; /* Changed by JS */
+    align-items: flex-end;
+}
+.add-record-form-container {
+    background: var(--bg-color);
+    width: 100%;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 1rem;
+    animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.add-record-header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.add-record-header h3 { margin: 0; font-size: 1.2rem; }
+.close-btn { font-size: 1.8rem; background: none; border: none; cursor: pointer; color: var(--text-secondary); }
+#add-record-form-mobile .amount-input-wrapper { display: flex; align-items: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+#add-record-form-mobile .currency-symbol { font-size: 2rem; color: var(--text-secondary); margin-right: 0.5rem; }
+#add-record-form-mobile input[type="number"] { font-size: 2.5rem; font-weight: bold; border: none; background: none; width: 100%; padding: 0; }
+#add-record-form-mobile input:focus { outline: none; }
+.type-tabs { display: flex; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; }
+.tab-btn { flex: 1; padding: 0.75rem; border: none; background: none; font-weight: 500; cursor: pointer; }
+.tab-btn.active { background-color: var(--primary-color); color: white; }
+.category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+.category-btn {
+    padding: 0.7rem; border: 1px solid var(--border-color);
+    border-radius: 8px; background: var(--card-bg);
+    cursor: pointer;
+}
+.category-btn.selected { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+#add-record-form-mobile .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+#add-record-form-mobile input[type="date"], #add-record-form-mobile input[type="text"] { width: 100%; padding: 0.7rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--card-bg); }
+.btn-submit-mobile { width: 100%; padding: 1rem; background: var(--primary-color); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+
+/* --- Settings page --- */
+.settings-group { background: var(--card-bg); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+.settings-group h3, .category-management-mobile h4 { margin: 0 0 1rem; font-size: 1rem; font-weight: 500; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+.budget-setting-item, .category-list-mobile li { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+.budget-list li:last-child { border-bottom: none; }
+.budget-input { display: flex; align-items: center; gap: 0.3rem; }
+.budget-input span { color: var(--text-secondary); }
+.budget-input input { width: 80px; text-align: right; padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; }
+.add-category-form-mobile { display: flex; gap: 0.5rem; margin-top: 1rem; }
+.add-category-form-mobile input { flex-grow: 1; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; }
+.add-category-form-mobile button { background: var(--primary-color); color: #fff; border: none; border-radius: 6px; width: 36px; height: 36px; font-size: 1.5rem; line-height: 1; }
+.btn-delete-sm { color: var(--red-color); }
+.btn-secondary-mobile.full-width { display: block; text-align: center; }
+
+/* SweetAlert on mobile */
+body.swal2-shown > .bottom-nav { display: none; }
+
+/* === 追加到 static/css/mobile.css 文件末尾 === */
+
+/* --- Edit Record Page Styles --- */
+.edit-form-mobile-container {
+    background: var(--card-bg);
+    padding: 1rem 1.25rem 2rem;
+    border-radius: 12px;
+}
+
+.form-group-mobile {
+    margin-bottom: 1.25rem;
+}
+
+.form-group-mobile label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.type-selector-mobile {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.type-selector-mobile input[type="radio"] {
+    display: none;
+}
+
+.type-selector-mobile label {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background-color: var(--bg-color);
+}
+
+.type-selector-mobile input[type="radio"]:checked+label {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.input-with-prefix {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0 0.75rem;
+}
+
+.input-with-prefix span {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    padding-right: 0.5rem;
+}
+
+.input-with-prefix input {
+    border: none;
+    background: none;
+    padding: 0.75rem 0;
+    width: 100%;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+.input-with-prefix input:focus {
+    outline: none;
+}
+
+.edit-form-mobile-container input[type="text"],
+.edit-form-mobile-container input[type="date"] {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-color);
+    font-size: 1rem;
+}
+
+.form-actions-mobile {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.btn-secondary-mobile {
+    display: inline-block;
+    width: 100%;
+    padding: 1rem;
+    background-color: #e5e7eb;
+    color: var(--text-primary);
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    box-sizing: border-box; /* Important for 100% width with padding */
+}
+
+
+/* --- Annual Report Page Styles --- */
+.report-container-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#year-selector-form-mobile select {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--card-bg);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.report-summary-card h3 {
+    margin: 0 0 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.metric-item span {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.metric-item strong {
+    font-size: 1.1rem;
+}
+
+.chart-card-mobile {
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+}
+.chart-card-mobile h3 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.chart-wrapper-mobile {
+    position: relative;
+    flex-grow: 1;
+}
+
+.summary-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.top-categories-list-mobile {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.top-categories-list-mobile li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
