@@ -9,6 +9,26 @@ from datetime import datetime, date
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory
 
+# --- [新增] 日志系统设置 ---
+# 1. 创建一个在内存中捕获日志的 StringIO 对象
+log_capture_string = io.StringIO()
+# 2. 获取根 logger
+root_logger = logging.getLogger()
+# 在 Chaquopy 中，根 logger 可能已经有一些 handler，我们先清除它们以避免重复日志
+if root_logger.hasHandlers():
+    root_logger.handlers.clear()
+# 3. 设置日志级别为 INFO，以捕获所有需要的日志
+root_logger.setLevel(logging.INFO)
+# 4. 创建一个将日志写入 StringIO 的 handler
+stream_handler = logging.StreamHandler(log_capture_string)
+# 5. 创建一个日志格式器
+formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
+# 6. 将格式器应用到 handler
+stream_handler.setFormatter(formatter)
+# 7. 将 handler 添加到根 logger
+root_logger.addHandler(stream_handler)
+# --- [新增结束] ---
+
 # --- 初始化 Flask 应用 ---
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
