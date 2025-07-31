@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity() {
                 .setTitle("发现新版本 v$version")
                 .setMessage("更新日志:\n\n$notes")
                 .setPositiveButton("立即下载") { _, _ ->
-                    downloadApk(url, "SubAggregator_v$version.apk")
+                    downloadApk(url, "Bookkeeping_v$version.apk")
                 }
                 .setNegativeButton("稍后", null)
                 .show()
@@ -212,7 +212,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             val request = DownloadManager.Request(Uri.parse(url))
-                .setTitle("正在下载 SubAggregator 更新")
+                .setTitle("正在下载 Bookkeeping 更新")
                 .setDescription(fileName)
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)

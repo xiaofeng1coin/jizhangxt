@@ -398,16 +398,86 @@ def import_json():
         
     return redirect(url_for('settings'))
 
-# --- 【关键新增】提供给 Android 调用的启动函数 ---
+# --- [新增开始] 日志查看路由 ---
+@app.route('/debuglog')
+def debug_log():
+    html_head = '''
+    <head>
+        <title>App Debug Log</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { background: #1a1a1a; color: #dcdcdc; font-family: Consolas, Monaco, monospace; line-height: 1.6; padding: 2em; margin: 0; }
+            .controls { position: fixed; top: 10px; right: 15px; background: #333; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; }
+            .controls button { background: #555; color: white; border: none; padding: 8px 12px; margin-left: 10px; cursor: pointer; border-radius: 3px; }
+            .controls button:hover { background: #666; }
+            h1 { color: #87ceeb; margin-top: 50px; }
+            pre { white-space: pre-wrap; word-wrap: break-word; }
+            .INFO { color: #dcdcdc; }
+            .WARNING { color: #f0e68c; }
+            .ERROR { color: #ff6b6b; font-weight: bold; }
+            .CRITICAL { color: #ff4757; font-weight: bold; background: #570000; display: block; padding: 2px 5px; }
+            .DIAGNOSTIC { color: #87ceeb; }
+        </style>
+    </head>
+    '''
+ 
+    log_contents = log_capture_string.getvalue()
+    
+    colored_log_lines = []
+    for line in log_contents.splitlines():
+        escaped_line = escape(line)
+        if " | ERROR " in escaped_line:
+            colored_log_lines.append(f'<span class="ERROR">{escaped_line}</span>')
+        elif " | WARNING " in escaped_line:
+            colored_log_lines.append(f'<span class="WARNING">{escaped_line}</span>')
+        elif " | CRITICAL" in escaped_line:
+            colored_log_lines.append(f'<span class="CRITICAL">{escaped_line}</span>')
+        elif "DIAGNOSTIC:" in escaped_line:
+            colored_log_lines.append(f'<span class="DIAGNOSTIC">{escaped_line}</span>')
+        else:
+            colored_log_lines.append(f'<span class="INFO">{escaped_line}</span>')
+    
+    colored_logs = "<br>".join(colored_log_lines)
+    
+    return f"""
+    <html>
+        {html_head}
+        <body>
+            <div class="controls">
+                <form method="POST" action="/debuglog/clear" style="display:inline;">
+                    <button type="submit">清空日志</button>
+                </form>
+                <button onclick="location.reload()">刷新</button>
+            </div>
+            <h1>应用后端实时日志</h1>
+            <pre>{colored_logs}</pre>
+            <script>
+                // 自动滚动到底部
+                window.scrollTo(0, document.body.scrollHeight);
+            </script>
+        </body>
+    </html>
+    """
+ 
+@app.route('/debuglog/clear', methods=['POST'])
+def clear_debug_log():
+    log_capture_string.truncate(0)
+    log_capture_string.seek(0)
+    logging.info("DIAGNOSTIC: Log has been manually cleared by user.")
+    return redirect(url_for('debug_log'))
+# --- [新增结束] ---
+ 
+ 
+# --- 启动逻辑 ---
 def start_server():
-    """
-    这是一个专门给 Chaquopy 调用的函数。
-    使用 0.0.0.0 作为主机，允许来自 WebView 的本地回环连接。
-    端口号必须与 MainActivity.kt 中访问的端口一致(5000)。
-    """
-    # Chaquopy 环境下关闭 reloader，因为它不起作用且可能导致问题
-    app.run(host='0.0.0.0', port=5001, debug=False)
-
-# --- 主程序入口 ---
+    """此函数由安卓的 Chaquopy 调用，用于在后台线程中启动服务器。"""
+    try:
+        logging.info("=" * 20 + " Sunshine Accounting 服务器启动 " + "=" * 20)
+        app.run(host='0.0.0.0', port=5001, debug=False)
+    except Exception as e:
+        logging.critical(f"FATAL: Flask server failed to start: {e}", exc_info=True)
+ 
+ 
 if __name__ == '__main__':
+    logging.info("=" * 20 + " Sunshine Accounting 应用启动 (Local Test) " + "=" * 20)
     app.run(host='0.0.0.0', port=5001, debug=True)

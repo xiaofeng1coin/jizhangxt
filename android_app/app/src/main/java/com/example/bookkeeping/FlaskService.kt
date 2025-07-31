@@ -66,8 +66,8 @@ class FlaskService : Service() {
         val icon = R.drawable.ic_notification // 使用应用图标作为备用
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Sub Aggregator 服务")
-            .setContentText("聚合服务正在后台运行")
+            .setContentTitle("Bookkeeping 服务")
+            .setContentText("记账服务正在后台运行")
             .setSmallIcon(icon)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
