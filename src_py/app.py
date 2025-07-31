@@ -13,6 +13,29 @@ from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory
 from markupsafe import escape # <-- 关键修复：添加缺失的 import
  
+# --- [关键修复] 动态确定数据存储目录 ---
+# 这个逻辑让应用在安卓和桌面电脑上都能正确工作
+ 
+# 默认在脚本文件旁边创建 data 目录 (用于本地测试)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ 
+try:
+    # 尝试导入 Chaquopy 的模块，如果成功，说明在安卓上运行
+    from com.chaquo.python.android import AndroidPlatform
+    context = AndroidPlatform.getApplication()
+    # 获取安卓应用的私有文件目录，这是唯一保证可写的地方
+    # 路径类似 /data/data/com.example.bookkeeping/files
+    BASE_DIR = context.getFilesDir().toString()
+    logging.info(f"Running on Android, data path set to: {BASE_DIR}")
+except ImportError:
+    # 如果导入失败，说明在本地电脑上运行
+    logging.info(f"Running on local machine, data path set to: {BASE_DIR}")
+ 
+# 现在，DATA_DIR 将是一个绝对路径，在安卓上保证可写
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+DATA_FILE = os.path.join(DATA_DIR, 'data.json')
+# --- [修复结束] ---
+
 # --- 日志系统设置 ---
 log_capture_string = io.StringIO()
 root_logger = logging.getLogger()
@@ -28,10 +51,6 @@ root_logger.addHandler(stream_handler)
 # --- 初始化 Flask 应用 ---
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-
-# --- 常量定义 ---
-DATA_DIR = 'data'
-DATA_FILE = os.path.join(DATA_DIR, 'data.json')
 
 # --- 核心辅助函数 ---
 def is_mobile():
@@ -53,21 +72,16 @@ def inject_global_vars():
 
 # --- 数据处理辅助函数 ---
 def save_data(data):
-    """将数据结构以美化的JSON格式保存到文件。"""
+    # 【重要】确保目录存在，现在会在正确的位置创建
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
+        logging.info(f"Created data directory at: {DATA_DIR}")
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 def load_data():
-    """加载数据文件。如果不存在或损坏，则创建并返回一个纯净的初始结构。"""
-    initial_data = {
-        "records": [],
-        "categories": {"expense": [], "income": []},
-        "budgets": {}
-    }
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
+    initial_data = {"records": [], "categories": {"expense": [], "income": []}, "budgets": {}}
+    # 我们不再需要在外面创建目录，save_data 会处理
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -77,6 +91,7 @@ def load_data():
             data.setdefault('budgets', {})
             return data
     except (FileNotFoundError, json.JSONDecodeError):
+        logging.warning(f"Data file not found or corrupted at {DATA_FILE}. Creating a new one.")
         save_data(initial_data)
         return initial_data
 
