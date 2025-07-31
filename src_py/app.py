@@ -1,61 +1,83 @@
-# 文件: app.py (最终定稿修复版)
+# 文件: app.py (最终修复版 - 修复安卓和Docker日志)
 
-# 文件: src_py/app.py (最终修复版)
- 
 import json
 import uuid
 import csv
 import io
 import os
-import logging  # <--- 关键修复：添加缺失的 import
+import logging
+import sys
 from datetime import datetime, date
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory
-from markupsafe import escape # <-- 关键修复：添加缺失的 import
- 
-# --- [关键修复] 动态确定数据存储目录 ---
-# 这个逻辑让应用在安卓和桌面电脑上都能正确工作
- 
-# 默认在脚本文件旁边创建 data 目录 (用于本地测试)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
- 
+from markupsafe import escape
+
+# --- [最终修复] 全新的、环境感知的日志和路径系统 ---
+
+# 1. 初始化一个全局变量来判断是否在安卓环境
+IS_ANDROID = False
+# 2. 默认的日志捕获对象
+log_capture_string = io.StringIO()
+
 try:
-    # 尝试导入 Chaquopy 的模块，如果成功，说明在安卓上运行
+    # 尝试导入 Chaquopy 模块，如果成功，说明在安卓上运行
     from com.chaquo.python.android import AndroidPlatform
     context = AndroidPlatform.getApplication()
-    # 获取安卓应用的私有文件目录，这是唯一保证可写的地方
-    # 路径类似 /data/data/com.example.bookkeeping/files
+    
+    # 获取安卓应用的私有文件目录
     BASE_DIR = context.getFilesDir().toString()
-    logging.info(f"Running on Android, data path set to: {BASE_DIR}")
+    IS_ANDROID = True
+    
+    # --- 仅在安卓环境下配置内存日志 ---
+    # 获取根 logger
+    root_logger = logging.getLogger()
+    # 设置基础日志级别
+    root_logger.setLevel(logging.INFO)
+    
+    # 创建一个将日志写入内存的 handler
+    android_memory_handler = logging.StreamHandler(log_capture_string)
+    # 创建日志格式
+    formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
+    android_memory_handler.setFormatter(formatter)
+    
+    # 【关键】不是清除再添加，而是只添加我们需要的内存 handler
+    # 这避免了与系统默认 logcat 输出的冲突
+    root_logger.addHandler(android_memory_handler)
+    
+    logging.info("Logger configured for Android environment.")
+    
 except ImportError:
-    # 如果导入失败，说明在本地电脑上运行
-    logging.info(f"Running on local machine, data path set to: {BASE_DIR}")
- 
-# 现在，DATA_DIR 将是一个绝对路径，在安卓上保证可写
+    # 如果导入失败，说明在本地电脑或 Docker 上运行
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    # --- 在非安卓环境下，使用标准输出日志 ---
+    # 我们只配置基础级别，让日志框架（如Flask, Gunicorn）的默认 handler 工作
+    # 这会将日志打印到控制台，从而被 Docker 捕获
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s | %(levelname)-8s | %(message)s',
+                        stream=sys.stdout) # 明确指定输出到标准输出
+                        
+    logging.info("Logger configured for non-Android environment (Docker/Local).")
+
+
+# 3. 现在，DATA_DIR 将是一个基于环境的绝对路径
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 DATA_FILE = os.path.join(DATA_DIR, 'data.json')
 # --- [修复结束] ---
 
-# --- 日志系统设置 ---
-log_capture_string = io.StringIO()
-root_logger = logging.getLogger()
-if root_logger.hasHandlers():
-    root_logger.handlers.clear()
-root_logger.setLevel(logging.INFO)
-stream_handler = logging.StreamHandler(log_capture_string)
-formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
-stream_handler.setFormatter(formatter)
-root_logger.addHandler(stream_handler)
-# --- 日志设置结束 ---
 
 # --- 初始化 Flask 应用 ---
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+
 # --- 核心辅助函数 ---
 def is_mobile():
     """检测请求是否来自移动设备。"""
     user_agent = request.headers.get('User-Agent', '').lower()
+    # 在安卓应用内，我们可以直接信任 IS_ANDROID 标志
+    if IS_ANDROID:
+        return True
     mobile_keywords = ['mobi', 'android', 'iphone', 'ipod', 'ipad', 'windows phone', 'blackberry']
     return any(keyword in user_agent for keyword in mobile_keywords)
 
@@ -72,7 +94,7 @@ def inject_global_vars():
 
 # --- 数据处理辅助函数 ---
 def save_data(data):
-    # 【重要】确保目录存在，现在会在正确的位置创建
+    """将数据结构以美化的JSON格式保存到文件。"""
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
         logging.info(f"Created data directory at: {DATA_DIR}")
@@ -80,14 +102,24 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 def load_data():
-    initial_data = {"records": [], "categories": {"expense": [], "income": []}, "budgets": {}}
-    # 我们不再需要在外面创建目录，save_data 会处理
+    """加载数据文件。如果不存在或损坏，则创建并返回一个纯净的初始结构。"""
+    initial_data = {
+        "records": [],
+        "categories": {"expense": [], "income": []},
+        "budgets": {}
+    }
+    if not os.path.exists(DATA_DIR):
+        # 仅在需要时创建目录
+        os.makedirs(DATA_DIR, exist_ok=True)
+
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
+            # 确保所有必需的键都存在
             data.setdefault('records', [])
-            data.setdefault('categories', {}).setdefault('expense', [])
-            data.setdefault('categories', {}).setdefault('income', [])
+            categories = data.setdefault('categories', {})
+            categories.setdefault('expense', [])
+            categories.setdefault('income', [])
             data.setdefault('budgets', {})
             return data
     except (FileNotFoundError, json.JSONDecodeError):
@@ -109,8 +141,6 @@ def index():
     monthly_expense_total = sum(r['amount'] for r in monthly_records if r['type'] == 'expense')
     monthly_savings = monthly_income_total - monthly_expense_total
     
-    # 【最终修复】将预算相关的计算逻辑移到 if/else 分支之前，作为通用逻辑
-    # 这样可以确保无论桌面端还是移动端，都能获取到所有需要的预算变量。
     budgets = defaultdict(float, data.get('budgets', {}))
     monthly_expense_by_category = defaultdict(float)
     for record in monthly_records:
@@ -128,7 +158,6 @@ def index():
     overall_budget_progress = (monthly_expense_total / total_budget) * 100 if total_budget > 0 else 0
 
     if is_mobile():
-        # 移动端视图只需要这些变量
         return render_template('mobile/index.html',
                                monthly_savings=monthly_savings,
                                monthly_income_total=monthly_income_total,
@@ -137,7 +166,6 @@ def index():
                                overall_budget_progress=overall_budget_progress,
                                budget_progress=budget_progress)
     else: 
-        # 桌面端视图需要每日数据 和 所有预算变量
         today_str = now.strftime('%Y-%m-%d')
         daily_income = sum(r['amount'] for r in all_records if r['date'] == today_str and r['type'] == 'income')
         daily_expense = sum(r['amount'] for r in all_records if r['date'] == today_str and r['type'] == 'expense')
@@ -152,8 +180,6 @@ def index():
                                overall_budget_progress=overall_budget_progress,
                                budget_progress=budget_progress)
 
-# --- 其他路由保持不变，为了完整性全部列出 ---
-
 @app.route('/add')
 def add_form():
     """仅移动端使用的路由，用于显示添加记录的表单页。"""
@@ -164,7 +190,6 @@ def add_form():
 
 @app.route('/add_record', methods=['POST'])
 def add_record():
-    """处理添加新记录的请求，已分离移动端和桌面端逻辑。"""
     data = load_data()
     try:
         amount_float = float(request.form.get('amount'))
@@ -173,7 +198,7 @@ def add_record():
         return redirect(url_for('add_form') if is_mobile() else url_for('index'))
 
     category = ""
-    if is_mobile(): # 移动端：处理“自定义类别”逻辑
+    if is_mobile():
         selected_category = request.form.get('category')
         if selected_category == '--custom--':
             category = request.form.get('custom_category_input', '').strip()
@@ -182,7 +207,7 @@ def add_record():
                 return redirect(url_for('add_form'))
         else:
             category = selected_category
-    else: # 桌面端：直接获取类别，保持简单逻辑
+    else:
         category = request.form.get('category', '').strip()
 
     new_record = {
@@ -209,7 +234,6 @@ def add_record():
 
 @app.route('/edit_record/<record_id>', methods=['GET', 'POST'])
 def edit_record(record_id):
-    """显示和处理编辑记录的请求，已分离移动端和桌面端逻辑。"""
     data = load_data()
     record_to_edit = next((r for r in data['records'] if r['id'] == record_id), None)
     if not record_to_edit:
@@ -224,7 +248,7 @@ def edit_record(record_id):
             return redirect(url_for('edit_record', record_id=record_id))
 
         category = ""
-        if is_mobile(): # 移动端逻辑
+        if is_mobile():
             selected_category = request.form.get('category')
             if selected_category == '--custom--':
                 category = request.form.get('custom_category_input', '').strip()
@@ -233,7 +257,7 @@ def edit_record(record_id):
                     return redirect(url_for('edit_record', record_id=record_id))
             else:
                 category = selected_category
-        else: # 桌面端逻辑
+        else:
             category = request.form.get('category').strip()
 
         record_to_edit['type'] = request.form.get('type')
@@ -380,7 +404,6 @@ def export_csv():
         headers={"Content-Disposition": f"attachment;filename=records_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
 
-# ---【新增】数据导入与导出路由 ---
 @app.route('/export_json')
 def export_json():
     """提供 data.json 文件下载"""
@@ -409,11 +432,9 @@ def import_json():
     
     if file and file.filename.endswith('.json'):
         try:
-            # 读取文件内容并解码为字符串
             file_content = file.stream.read().decode('utf-8')
             new_data = json.loads(file_content)
  
-            # 验证JSON文件的基本结构
             if 'records' in new_data and 'categories' in new_data and 'budgets' in new_data:
                 save_data(new_data)
                 flash('数据导入成功！您的所有数据已被更新。', 'success')
@@ -429,9 +450,12 @@ def import_json():
         
     return redirect(url_for('settings'))
 
-# --- [新增开始] 日志查看路由 ---
 @app.route('/debuglog')
 def debug_log():
+    # 这个路由只在安卓环境中有意义，因为只有安卓环境会向 log_capture_string 写日志
+    if not IS_ANDROID:
+        return "<pre>Debug log is only available in the Android APK environment.</pre>", 404
+
     html_head = '''
     <head>
         <title>App Debug Log</title>
@@ -483,7 +507,6 @@ def debug_log():
             <h1>应用后端实时日志</h1>
             <pre>{colored_logs}</pre>
             <script>
-                // 自动滚动到底部
                 window.scrollTo(0, document.body.scrollHeight);
             </script>
         </body>
@@ -492,23 +515,29 @@ def debug_log():
  
 @app.route('/debuglog/clear', methods=['POST'])
 def clear_debug_log():
+    if not IS_ANDROID:
+        return "Operation not permitted.", 403
     log_capture_string.truncate(0)
     log_capture_string.seek(0)
     logging.info("DIAGNOSTIC: Log has been manually cleared by user.")
     return redirect(url_for('debug_log'))
-# --- [新增结束] ---
  
  
-# --- 启动逻辑 ---
+# --- 启动逻辑 (端口保持为 5001) ---
 def start_server():
-    """此函数由安卓的 Chaquopy 调用，用于在后台线程中启动服务器。"""
+    """此函数由安卓的 Chaquopy 调用。"""
     try:
-        logging.info("=" * 20 + " Sunshine Accounting 服务器启动 " + "=" * 20)
+        logging.info("=" * 20 + " Sunshine Accounting 服务器启动 (Android) " + "=" * 20)
+        # 严格按照你的要求，端口保持 5001
         app.run(host='0.0.0.0', port=5001, debug=False)
     except Exception as e:
+        # 在安卓上，重要的错误会通过内存日志记录下来
         logging.critical(f"FATAL: Flask server failed to start: {e}", exc_info=True)
  
  
 if __name__ == '__main__':
-    logging.info("=" * 20 + " Sunshine Accounting 应用启动 (Local Test) " + "=" * 20)
+    # 本地或 Docker 测试时使用的配置
+    logging.info("=" * 20 + " Sunshine Accounting 应用启动 (Local/Docker) " + "=" * 20)
+    # 严格按照你的要求，端口保持 5001
     app.run(host='0.0.0.0', port=5001, debug=True)
+
