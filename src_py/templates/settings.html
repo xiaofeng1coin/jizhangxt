@@ -76,9 +76,32 @@
                     </li>
                     {% endfor %}
                 </ul>
-                <button type="submit" class="btn-submit">保存预算</button>
+                <!-- 添加一个隐藏的input或name到button，以便后端区分是哪个表单提交的 -->
+                <button type="submit" name="budget_save" value="1" class="btn-submit">保存预算</button>
              </form>
         </div>
+ 
+        <!-- 【新增】数据导入与导出 -->
+        <div class="settings-card">
+            <h2>数据管理</h2>
+            <div class="data-management">
+                <p class="muted-text">您可以将所有数据导出为一个JSON文件进行备份，或从备份文件恢复数据。</p>
+                <a href="{{ url_for('export_json') }}" class="btn-secondary" style="margin-bottom: 2rem; display: block; text-align: center;">导出全部数据 (JSON)</a>
+ 
+                <h3 style="border-top: 1px solid var(--border-color); padding-top: 1.5rem; margin-top: 1.5rem;">导入数据</h3>
+                <form action="{{ url_for('import_json') }}" method="post" enctype="multipart/form-data" class="import-form">
+                    <div class="form-group">
+                        <label for="json_file">选择一个 .json 备份文件：</label>
+                        <input type="file" id="json_file" name="json_file" accept=".json" required>
+                    </div>
+                    <p class="flash flash-error" style="text-align: left; font-size: 0.9em; padding: 0.8em;">
+                        <strong>警告：</strong>导入操作将会完全覆盖当前所有数据（账单、分类、预算）。此操作不可撤销，请务必谨慎！
+                    </p>
+                    <button type="submit" class="btn-submit" style="background-color: var(--expense-color);">确认导入并覆盖</button>
+                </form>
+            </div>
+        </div>
+        
     </div>
 </section>
 {% endblock %}

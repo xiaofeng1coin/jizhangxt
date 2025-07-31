@@ -1,24 +1,31 @@
-# .dockerignore
-
-# Git
+# Git and IDE files
 .git
 .gitignore
 .github
+.idea
+*.iml
 
-# Docker
-Dockerfile
-.dockerignore
+# Android Project - This is a huge folder we don't need
+android_app/
 
-# Python
+# Python specific
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-venv/
-.venv/
+.Python
 env/
-*.egg-info/
+venv/
 
-# IDE / Editor
-.vscode/
-.idea/
+# Project management and documentation
+pyproject.toml
+CHANGELOG.md
+README.md
+
+# This Dockerfile itself
+Dockerfile
+docker-compose.yml
+
+# Any other sensitive files
+.env
+*.pem

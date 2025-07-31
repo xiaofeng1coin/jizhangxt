@@ -84,11 +84,31 @@
     </div>
 </div>
 
-<!-- 数据导出 -->
+<!-- 【更新】数据管理 (导入/导出) -->
 <div class="content-card">
-    <a href="{{ url_for('export_csv') }}" class="export-link">
-        <span>导出全部数据</span>
+    <div class="card-header">
+        <h3>数据管理</h3>
+        <span class="card-header-subtitle">备份与恢复</span>
+    </div>
+    
+    <a href="{{ url_for('export_json') }}" class="export-link">
+        <span>导出全部数据 (JSON)</span>
         <span>&rarr;</span>
     </a>
+    <a href="{{ url_for('export_csv') }}" class="export-link" style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+        <span>导出账单明细 (CSV)</span>
+        <span>&rarr;</span>
+    </a>
+ 
+    <form action="{{ url_for('import_json') }}" method="post" enctype="multipart/form-data" class="modern-form" style="padding: 0;">
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label for="json_file">从备份文件导入</label>
+            <input type="file" id="json_file" name="json_file" accept=".json" required>
+        </div>
+        <p style="font-size: 0.8em; color: var(--red); margin: 0.5rem 0 1rem; text-align: center; font-weight: 500;">
+           警告：导入会覆盖所有现有数据！
+        </p>
+        <button type="submit" class="btn-submit" style="background-color: var(--red);">确认导入</button>
+    </form>
 </div>
 {% endblock %}

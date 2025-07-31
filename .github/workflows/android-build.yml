@@ -1,0 +1,139 @@
+# =================================================================
+# ==           最终联动版 - CI/CD 自动更新 App 版本           ==
+# =================================================================
+name: Build and Release
+
+on:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    env:
+      KEYSTORE_IS_PRESENT: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+      IS_RELEASE_COMMIT: ${{ startsWith(github.event.head_commit.message, 'fix') }}
+
+    steps:
+      - name: 1. Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      - name: 2. Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 3. Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: 4. Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: 5. 准备构建环境 (复制 Python 文件)
+        run: |
+          ANDROID_PYTHON_TARGET_DIR="android_app/app/src/main/python"
+          mkdir -p $ANDROID_PYTHON_TARGET_DIR
+          cp app.py clash_template.yaml data.json requirements.txt $ANDROID_PYTHON_TARGET_DIR/ || true
+          cp -r src_py/. $ANDROID_PYTHON_TARGET_DIR/ || true
+
+      - name: 6. 授予 Gradle Wrapper 执行权限
+        run: chmod +x android_app/gradlew
+        
+      - name: 7. Decode and Restore Keystore (仅在发布时)
+        if: env.IS_RELEASE_COMMIT == 'true' && env.KEYSTORE_IS_PRESENT == 'true'
+        run: |
+          echo "Release commit detected. Restoring keystore for signing..."
+          KEYSTORE_FILE_PATH="android_app/app/my-release-key.keystore"
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > $KEYSTORE_FILE_PATH
+          echo "Keystore restored to $KEYSTORE_FILE_PATH"
+
+      # === 新增：第8步 - 提前计算版本号 ===
+      - name: 8. 版本管理 (仅限发布)
+        id: versioning
+        if: env.IS_RELEASE_COMMIT == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 检查gh是否已安装
+          if ! command -v gh &> /dev/null; then
+            echo "gh not found, installing..."
+            sudo apt-get update && sudo apt-get install gh -y
+          fi
+          
+          LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "v1.0.2") # 初始版本与 Gradle 文件保持一致
+          if [[ -z "$LATEST_TAG" ]]; then
+            LATEST_TAG="v1.0.2"
+          fi
+
+          NEW_VERSION=$(echo $LATEST_TAG | awk -F. -v OFS=. '{$NF++;print}')
+          echo "Bumping version from $LATEST_TAG to $NEW_VERSION"
+          
+          # 将新版本号输出，供后续步骤使用
+          echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      # === 修改：第9步 - 构建 APK，并注入版本号 ===
+      - name: 9. 构建 Android APK
+        id: build_apk
+        working-directory: ./android_app 
+        run: |
+          extra_params=""
+          if [[ "${{ env.IS_RELEASE_COMMIT }}" == "true" ]]; then
+            echo "Building for RELEASE..."
+            BUILD_TYPE="Release"
+            # 将新版本号作为属性传给 Gradle
+            extra_params="-PversionName=${{ steps.versioning.outputs.NEW_VERSION }}"
+            GRADLE_PARAMS="-PRELEASE_KEYSTORE_FILE=my-release-key.keystore \
+                           -PRELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }} \
+                           -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
+                           -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}"
+          else
+            echo "Building for DEBUG..."
+            BUILD_TYPE="Debug"
+            GRADLE_PARAMS=""
+          fi
+          
+          # 合并参数并执行构建
+          ./gradlew assemble${BUILD_TYPE} ${GRADLE_PARAMS} ${extra_params} --stacktrace
+
+          # 后续查找 APK 的逻辑不变
+          APK_FOLDER_NAME=$(echo "$BUILD_TYPE" | tr '[:upper:]' '[:lower:]')
+          raw_apk_path=$(find ./app/build/outputs/apk/${APK_FOLDER_NAME} -name "*.apk" -print -quit)
+          apk_path=$(echo "$raw_apk_path" | sed 's|^\./||')
+          if [[ -z "$apk_path" ]]; then echo "::error::APK not found!"; exit 1; fi
+          
+          echo "APK_PATH=$apk_path" >> "$GITHUB_OUTPUT"
+          echo "BUILD_TYPE=$BUILD_TYPE" >> "$GITHUB_OUTPUT"
+        
+      - name: 10. Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build_apk.outputs.BUILD_TYPE }}-APK
+          path: android_app/${{ steps.build_apk.outputs.APK_PATH }}
+          retention-days: 7
+
+      # === 修改：第11步 - 仅使用计算好的版本号进行发布 ===
+      - name: 11. 发布到 GitHub Release
+        if: env.IS_RELEASE_COMMIT == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_VERSION="${{ steps.versioning.outputs.NEW_VERSION }}"
+          echo "Creating release for version: $NEW_VERSION"
+
+          # 直接使用版本号创建 release，不再需要在这里计算
+          gh release create "$NEW_VERSION" "android_app/${{ steps.build_apk.outputs.APK_PATH }}" \
+            --title "Release $NEW_VERSION" \
+            --notes "* ${{ github.event.head_commit.message }}" \
+            --latest

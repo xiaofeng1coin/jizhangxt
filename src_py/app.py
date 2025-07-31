@@ -7,7 +7,7 @@ import io
 import os
 from datetime import datetime, date
 from collections import defaultdict
-from flask import Flask, render_template, request, redirect, url_for, flash, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory
 
 # --- 初始化 Flask 应用 ---
 app = Flask(__name__)
@@ -349,6 +349,65 @@ def export_csv():
         headers={"Content-Disposition": f"attachment;filename=records_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
 
+# ---【新增】数据导入与导出路由 ---
+@app.route('/export_json')
+def export_json():
+    """提供 data.json 文件下载"""
+    if not os.path.exists(DATA_FILE):
+        flash('数据文件不存在，无法导出。', 'danger')
+        return redirect(url_for('settings'))
+    return send_from_directory(
+        directory=DATA_DIR, 
+        path=os.path.basename(DATA_FILE), 
+        as_attachment=True,
+        download_name='sunshine_accounting_backup.json'
+    )
+ 
+@app.route('/import_json', methods=['POST'])
+def import_json():
+    """处理上传的 JSON 文件并替换现有数据"""
+    if 'json_file' not in request.files:
+        flash('没有文件被上传。', 'danger')
+        return redirect(url_for('settings'))
+    
+    file = request.files['json_file']
+ 
+    if file.filename == '':
+        flash('未选择任何文件。', 'danger')
+        return redirect(url_for('settings'))
+    
+    if file and file.filename.endswith('.json'):
+        try:
+            # 读取文件内容并解码为字符串
+            file_content = file.stream.read().decode('utf-8')
+            new_data = json.loads(file_content)
+ 
+            # 验证JSON文件的基本结构
+            if 'records' in new_data and 'categories' in new_data and 'budgets' in new_data:
+                save_data(new_data)
+                flash('数据导入成功！您的所有数据已被更新。', 'success')
+            else:
+                flash('导入失败：JSON文件结构不正确，缺少必要的键 (records, categories, budgets)。', 'danger')
+        
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            flash('导入失败：文件不是有效的UTF-8编码JSON文件。', 'danger')
+        except Exception as e:
+            flash(f'发生未知错误: {e}', 'danger')
+    else:
+        flash('导入失败：请上传一个 .json 文件。', 'danger')
+        
+    return redirect(url_for('settings'))
+
+# --- 【关键新增】提供给 Android 调用的启动函数 ---
+def start_server():
+    """
+    这是一个专门给 Chaquopy 调用的函数。
+    使用 0.0.0.0 作为主机，允许来自 WebView 的本地回环连接。
+    端口号必须与 MainActivity.kt 中访问的端口一致(5000)。
+    """
+    # Chaquopy 环境下关闭 reloader，因为它不起作用且可能导致问题
+    app.run(host='0.0.0.0', port=5001, debug=False)
+
 # --- 主程序入口 ---
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

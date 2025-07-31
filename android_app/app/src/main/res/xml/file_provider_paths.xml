@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 
+      [关键修正] 
+      使用 <external-path> 来代表公共存储区域。
+      path="Download/" 对应 Environment.DIRECTORY_DOWNLOADS
+    -->
+    <external-path name="public_downloads" path="Download/" />
+</paths>
