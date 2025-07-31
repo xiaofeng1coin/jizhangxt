@@ -13,77 +13,87 @@ from flask import Flask, render_template, request, redirect, url_for, flash, Res
 from markupsafe import escape
 
 # --- [最终修复] 全新的、环境感知的日志和路径系统 ---
-
-# 1. 初始化一个全局变量来判断是否在安卓环境
+ 
+# 1. 关键变化：将所有环境相关的初始化逻辑移入一个独立的函数中
+_env_initialized = False
 IS_ANDROID = False
-# 2. 默认的日志捕获对象
+DATA_DIR = None
+DATA_FILE = None
 log_capture_string = io.StringIO()
-
-try:
-    # 尝试导入 Chaquopy 模块，如果成功，说明在安卓上运行
-    from com.chaquo.python.android import AndroidPlatform
-    context = AndroidPlatform.getApplication()
-    
-    # 获取安卓应用的私有文件目录
-    BASE_DIR = context.getFilesDir().toString()
-    IS_ANDROID = True
-    
-    # --- 仅在安卓环境下配置内存日志 ---
-    # 获取根 logger
-    root_logger = logging.getLogger()
-    # 设置基础日志级别
-    root_logger.setLevel(logging.INFO)
-    
-    # 创建一个将日志写入内存的 handler
-    android_memory_handler = logging.StreamHandler(log_capture_string)
-    # 创建日志格式
-    formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
-    android_memory_handler.setFormatter(formatter)
-    
-    # 【关键】不是清除再添加，而是只添加我们需要的内存 handler
-    # 这避免了与系统默认 logcat 输出的冲突
-    root_logger.addHandler(android_memory_handler)
-    
-    logging.info("Logger configured for Android environment.")
-    
-except ImportError:
-    # 如果导入失败，说明在本地电脑或 Docker 上运行
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    
-    # --- 在非安卓环境下，使用标准输出日志 ---
-    # 我们只配置基础级别，让日志框架（如Flask, Gunicorn）的默认 handler 工作
-    # 这会将日志打印到控制台，从而被 Docker 捕获
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s | %(levelname)-8s | %(message)s',
-                        stream=sys.stdout) # 明确指定输出到标准输出
+ 
+def _initialize_app_env():
+    """
+    执行一次性的、延迟的环境初始化。
+    这是解决启动时崩溃的核心，确保只在应用完全就绪后才调用安卓API。
+    """
+    global _env_initialized, IS_ANDROID, DATA_DIR, DATA_FILE, log_capture_string
+    if _env_initialized:
+        return
+ 
+    try:
+        # 只有当这个函数被调用时，我们才尝试访问 Chaquopy 的功能
+        from com.chaquo.python.android import AndroidPlatform
+        context = AndroidPlatform.getApplication()
+        
+        # 这一步现在应该会成功
+        BASE_DIR = context.getFilesDir().toString()
+        IS_ANDROID = True
+        
+        # --- 安卓环境下的日志配置 ---
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler(log_capture_string)
+        formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
+        handler.setFormatter(formatter)
+        
+        # 避免重复添加 handler
+        if root_logger.hasHandlers():
+            root_logger.handlers.clear()
+        root_logger.addHandler(handler)
+        logging.info("Logger configured for Android environment.")
+        
+    except Exception:
+        # 如果失败，则我们处于本地电脑或 Docker 环境
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        IS_ANDROID = False
+        
+        # --- 非安卓环境的日志配置 ---
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s | %(levelname)-8s | %(message)s',
+                            stream=sys.stdout,
+                            force=True) # force=True 确保配置生效
                         
-    logging.info("Logger configured for non-Android environment (Docker/Local).")
-
-
-# 3. 现在，DATA_DIR 将是一个基于环境的绝对路径
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-DATA_FILE = os.path.join(DATA_DIR, 'data.json')
-# --- [修复结束] ---
-
-
-# --- 初始化 Flask 应用 ---
+        logging.info("Logger configured for non-Android environment (Docker/Local).")
+ 
+    # 初始化路径变量
+    DATA_DIR = os.path.join(BASE_DIR, 'data')
+    DATA_FILE = os.path.join(DATA_DIR, 'data.json')
+ 
+    # 确保数据目录存在
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR, exist_ok=True)
+        logging.info(f"Created data directory at: {DATA_DIR}")
+    
+    _env_initialized = True
+ 
+# --- Flask 应用初始化 ---
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-
-
+ 
 # --- 核心辅助函数 ---
 def is_mobile():
     """检测请求是否来自移动设备。"""
+    _initialize_app_env() # 确保 IS_ANDROID 已被正确设置
     user_agent = request.headers.get('User-Agent', '').lower()
-    # 在安卓应用内，我们可以直接信任 IS_ANDROID 标志
     if IS_ANDROID:
         return True
     mobile_keywords = ['mobi', 'android', 'iphone', 'ipod', 'ipad', 'windows phone', 'blackberry']
     return any(keyword in user_agent for keyword in mobile_keywords)
-
+ 
 @app.context_processor
 def inject_global_vars():
     """为所有模板注入全局变量，减少重复代码。"""
+    _initialize_app_env() # 确保环境已初始化
     data = load_data()
     return {
         'current_year': datetime.now().year,
@@ -91,31 +101,26 @@ def inject_global_vars():
         'default_expense_categories': data['categories']['expense'],
         'default_income_categories': data['categories']['income']
     }
-
-# --- 数据处理辅助函数 ---
+ 
+# --- 数据处理辅助函数 (关键修改) ---
 def save_data(data):
     """将数据结构以美化的JSON格式保存到文件。"""
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
-        logging.info(f"Created data directory at: {DATA_DIR}")
+    _initialize_app_env() # 在使用 DATA_FILE 前，确保它已经被初始化
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-
+ 
 def load_data():
     """加载数据文件。如果不存在或损坏，则创建并返回一个纯净的初始结构。"""
+    _initialize_app_env() # 在使用 DATA_FILE 前，确保它已经被初始化
     initial_data = {
         "records": [],
         "categories": {"expense": [], "income": []},
         "budgets": {}
     }
-    if not os.path.exists(DATA_DIR):
-        # 仅在需要时创建目录
-        os.makedirs(DATA_DIR, exist_ok=True)
-
+    
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # 确保所有必需的键都存在
             data.setdefault('records', [])
             categories = data.setdefault('categories', {})
             categories.setdefault('expense', [])
@@ -452,7 +457,7 @@ def import_json():
 
 @app.route('/debuglog')
 def debug_log():
-    # 这个路由只在安卓环境中有意义，因为只有安卓环境会向 log_capture_string 写日志
+    _initialize_app_env() # 初始化
     if not IS_ANDROID:
         return "<pre>Debug log is only available in the Android APK environment.</pre>", 404
 
@@ -526,18 +531,14 @@ def clear_debug_log():
 # --- 启动逻辑 (端口保持为 5001) ---
 def start_server():
     """此函数由安卓的 Chaquopy 调用。"""
+    # 初始化调用现在被移到了需要它的函数内部，这里不需要了
     try:
         logging.info("=" * 20 + " Sunshine Accounting 服务器启动 (Android) " + "=" * 20)
-        # 严格按照你的要求，端口保持 5001
         app.run(host='0.0.0.0', port=5001, debug=False)
     except Exception as e:
-        # 在安卓上，重要的错误会通过内存日志记录下来
         logging.critical(f"FATAL: Flask server failed to start: {e}", exc_info=True)
  
- 
 if __name__ == '__main__':
-    # 本地或 Docker 测试时使用的配置
+    # 本地测试时，初始化也会被懒加载，无需显示调用
     logging.info("=" * 20 + " Sunshine Accounting 应用启动 (Local/Docker) " + "=" * 20)
-    # 严格按照你的要求，端口保持 5001
     app.run(host='0.0.0.0', port=5001, debug=True)
-
