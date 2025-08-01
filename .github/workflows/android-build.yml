@@ -41,17 +41,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-      #- name: 5. 准备构建环境 (复制 Python 文件)
-        #run: |
-          #ANDROID_PYTHON_TARGET_DIR="android_app/app/src/main/python"
-          #mkdir -p $ANDROID_PYTHON_TARGET_DIR
-          #cp app.py clash_template.yaml data.json requirements.txt $ANDROID_PYTHON_TARGET_DIR/ || true
-          #cp -r src_py/. $ANDROID_PYTHON_TARGET_DIR/ || true
+      - name: 5. 准备构建环境 (复制 Python 文件)
+        run: |
+          ANDROID_PYTHON_TARGET_DIR="android_app/app/src/main/python"
+          mkdir -p $ANDROID_PYTHON_TARGET_DIR
+          cp app.py clash_template.yaml data.json requirements.txt $ANDROID_PYTHON_TARGET_DIR/ || true
+          cp -r src_py/. $ANDROID_PYTHON_TARGET_DIR/ || true
 
-      - name: 5. 授予 Gradle Wrapper 执行权限
+      - name: 6. 授予 Gradle Wrapper 执行权限
         run: chmod +x android_app/gradlew
         
-      - name: 6. Decode and Restore Keystore (仅在发布时)
+      - name: 7. Decode and Restore Keystore (仅在发布时)
         if: env.IS_RELEASE_COMMIT == 'true' && env.KEYSTORE_IS_PRESENT == 'true'
         run: |
           echo "Release commit detected. Restoring keystore for signing..."
@@ -60,7 +60,7 @@ jobs:
           echo "Keystore restored to $KEYSTORE_FILE_PATH"
 
       # === 新增：第8步 - 提前计算版本号 ===
-      - name: 7. 版本管理 (仅限发布)
+      - name: 8. 版本管理 (仅限发布)
         id: versioning
         if: env.IS_RELEASE_COMMIT == 'true'
         env:
@@ -84,7 +84,7 @@ jobs:
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       # === 修改：第9步 - 构建 APK，并注入版本号 ===
-      - name: 8. 构建 Android APK
+      - name: 9. 构建 Android APK
         id: build_apk
         working-directory: ./android_app 
         run: |
@@ -116,7 +116,7 @@ jobs:
           echo "APK_PATH=$apk_path" >> "$GITHUB_OUTPUT"
           echo "BUILD_TYPE=$BUILD_TYPE" >> "$GITHUB_OUTPUT"
         
-      - name: 9. Upload APK as Artifact
+      - name: 10. Upload APK as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.build_apk.outputs.BUILD_TYPE }}-APK
@@ -124,7 +124,7 @@ jobs:
           retention-days: 7
 
       # === 修改：第11步 - 仅使用计算好的版本号进行发布 ===
-      - name: 10. 发布到 GitHub Release
+      - name: 11. 发布到 GitHub Release
         if: env.IS_RELEASE_COMMIT == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
