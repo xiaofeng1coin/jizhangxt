@@ -53,8 +53,8 @@ android {
             versionCode = generateVersionCode(finalVersionName)
         } else {
             // 如果没有（例如本地开发），使用默认值
-            versionName = "1.0.2"
-            versionCode = 10002
+            versionName = "1.0.0"
+            versionCode = 10000
         }
         // =========================================
         

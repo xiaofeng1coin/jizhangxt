@@ -89,11 +89,18 @@ def save_data(data):
 
 def load_data():
     _initialize_app_env()
+    
+    # === [ 核心修改 ] ===
+    # 当 data.json 文件不存在时，使用这个带有默认分类的结构来创建它
     initial_data = {
         "records": [],
-        "categories": {"expense": [], "income": []},
+        "categories": {
+            "expense": ["交通"],
+            "income": ["工资"]
+        },
         "budgets": {}
     }
+    # === [ 修改结束 ] ===
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
