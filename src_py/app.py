@@ -460,9 +460,13 @@ def import_json():
 
 @app.route('/debuglog')
 def debug_log():
-    _initialize_app_env() # 初始化
-    if not IS_ANDROID:
-        return "<pre>Debug log is only available in the Android APK environment.</pre>", 404
+    user_agent = request.headers.get('User-Agent', '').lower()
+
+    # 判断是否为安卓设备浏览器（非App WebView）
+    is_mobile = any(k in user_agent for k in ['android', 'iphone', 'ipad'])
+
+    if not is_android_browser:
+        return "<pre>Debug log 仅支持安卓浏览器访问。</pre>", 404
 
     html_head = '''
     <head>
@@ -523,8 +527,13 @@ def debug_log():
  
 @app.route('/debuglog/clear', methods=['POST'])
 def clear_debug_log():
-    if not IS_ANDROID:
-        return "Operation not permitted.", 403
+    user_agent = request.headers.get('User-Agent', '').lower()
+
+    # 判断是否来自安卓浏览器（非App WebView）
+    is_mobile = any(k in user_agent for k in ['android', 'iphone', 'ipad'])
+
+    if not is_android_browser:
+        return "Access denied: only available from Android browser.", 403
     log_capture_string.truncate(0)
     log_capture_string.seek(0)
     logging.info("DIAGNOSTIC: Log has been manually cleared by user.")
