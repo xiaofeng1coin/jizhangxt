@@ -1,5 +1,5 @@
 // 文件路径: app/src/main/java/com/example/bookkeeping/MainActivity.kt
-// (这是修复了文件导入导出功能的完整版本)
+// (这是修复了文件选择器崩溃问题的最终版本)
 
 package com.example.bookkeeping
 
@@ -37,18 +37,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val GITHUB_API_URL = "https://api.github.com/repos/xiaofeng1coin/jizhangxt/releases/latest"
     private var downloadID: Long = -1L
-
-    // 用于处理文件选择的回调
+    
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
 
-    // ActivityResultLauncher，用于启动文件选择器并接收结果
     private val fileChooserLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val data: Intent? = result.data
             var results: Array<Uri>? = null
             if (result.resultCode == RESULT_OK) {
-                if (data?.dataString != null) {
-                    results = arrayOf(Uri.parse(data.dataString))
+                result.data?.dataString?.let {
+                    results = arrayOf(Uri.parse(it))
                 }
             }
             filePathCallback?.onReceiveValue(results)
@@ -111,8 +108,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         askForNotificationPermissionAndStartService()
-
-        // 完整配置 WebView
+        
         setupWebView()
 
         binding.webView.postDelayed({
@@ -123,19 +119,17 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         binding.webView.apply {
-            webViewClient = WebViewClient() // 页面内跳转
-            settings.javaScriptEnabled = true // 启用 JS
-            settings.domStorageEnabled = true // 启用 DOM 存储
+            webViewClient = WebViewClient()
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
 
-            // 设置 DownloadListener来处理文件下载（导出功能）
-            setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
                 try {
                     val request = DownloadManager.Request(Uri.parse(url))
                     request.setMimeType(mimeType)
                     request.addRequestHeader("User-Agent", userAgent)
                     request.setDescription("正在下载文件...")
 
-                    // 从 contentDisposition 中解析文件名
                     val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
                     request.setTitle(fileName)
 
@@ -151,35 +145,35 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // 设置 WebChromeClient 来处理文件上传（导入功能）
             webChromeClient = object : WebChromeClient() {
+                // ================== [ 关键修改区域 ] ==================
                 override fun onShowFileChooser(
                     webView: WebView?,
                     filePathCallback: ValueCallback<Array<Uri>>?,
                     fileChooserParams: FileChooserParams?
                 ): Boolean {
-                    // 如果有正在进行的文件选择，先取消它
                     this@MainActivity.filePathCallback?.onReceiveValue(null)
                     this@MainActivity.filePathCallback = filePathCallback
                     
                     val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
                         addCategory(Intent.CATEGORY_OPENABLE)
-                        // 使用参数中的 accept-types 来限定文件类型
-                        type = if (fileChooserParams?.acceptTypes?.isNotEmpty() == true && fileChooserParams.acceptTypes[0].isNotEmpty()) {
-                            fileChooserParams.acceptTypes[0]
-                        } else {
-                            "*/*"
-                        }
+                        type = fileChooserParams?.acceptTypes?.firstOrNull() ?: "*/*"
                     }
                     
                     try {
                         fileChooserLauncher.launch(intent)
                     } catch (e: Exception) {
-                        Toast.makeText(this@MainActivity, "无法打开文件选择器", Toast.LENGTH_SHORT).show()
-                        return false
+                        // 异常处理：提供更详细的错误信息，并正确取消回调
+                        Toast.makeText(this@MainActivity, "无法打开文件选择器: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        
+                        // [核心修复] 必须通知WebView操作已取消，否则会导致崩溃
+                        this@MainActivity.filePathCallback?.onReceiveValue(null)
+                        this@MainActivity.filePathCallback = null
                     }
-                    return true // 返回 true 表示我们已经处理了这次请求
+                    // 始终返回true，表示我们已经处理了此事件（无论是成功启动还是捕获异常）
+                    return true
                 }
+                 // ================== [ 修改结束 ] ==================
             }
         }
     }
