@@ -39,7 +39,7 @@ def _initialize_app_env():
         IS_ANDROID = False
 
     # 统一日志配置：始终写入 log_capture_string
-    root_logger = logging.getLogger()
+root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
@@ -47,11 +47,31 @@ def _initialize_app_env():
     formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
-
-    # 路径初始化
-    DATA_DIR = os.path.join(BASE_DIR, 'data')
+ 
+    # ==================== [ 核心修复与数据迁移逻辑 ] ====================
+    # 1. 定义旧的数据路径（可能与APK打包内容冲突）和新的安全路径
+    OLD_DATA_DIR = os.path.join(BASE_DIR, 'data')
+    NEW_DATA_DIR = os.path.join(BASE_DIR, 'user_data') # <-- 使用一个不会冲突的新名字
+ 
+    # 2. 添加一次性迁移逻辑
+    #    如果旧目录存在，而新目录不存在，说明是老用户第一次更新到此版本，需要迁移数据
+    if IS_ANDROID and os.path.isdir(OLD_DATA_DIR) and not os.path.isdir(NEW_DATA_DIR):
+        try:
+            logging.info(f"DIAGNOSTIC: Found old data at '{OLD_DATA_DIR}'. Migrating to '{NEW_DATA_DIR}'.")
+            # 将旧目录重命名为新目录，完成数据迁移
+            os.rename(OLD_DATA_DIR, NEW_DATA_DIR)
+            logging.info("DIAGNOSTIC: Data migration successful.")
+        except OSError as e:
+            # 记录严重错误，但程序继续，以避免应用崩溃
+            logging.critical(f"FATAL: Failed to migrate data from old directory: {e}", exc_info=True)
+            # 即使迁移失败，后续逻辑也会在新的、安全的目录中创建新数据，防止覆盖旧数据
+ 
+    # 3. 统一使用新的、安全的路径进行初始化
+    DATA_DIR = NEW_DATA_DIR
     DATA_FILE = os.path.join(DATA_DIR, 'data.json')
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True) # 确保目录存在
+    # ======================== [ 修复结束 ] ========================
+ 
     _env_initialized = True
  
 # --- Flask 应用初始化 ---
