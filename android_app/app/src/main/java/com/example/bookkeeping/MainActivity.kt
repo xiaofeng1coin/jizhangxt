@@ -1,4 +1,5 @@
 // 文件路径: app/src/main/java/com/example/bookkeeping/MainActivity.kt
+// (这是修复了文件导入导出功能的完整版本)
 
 package com.example.bookkeeping
 
@@ -19,13 +20,11 @@ import android.os.Environment
 import android.provider.Settings
 import android.view.Menu
 import android.view.MenuItem
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import com.example.bookkeeping.databinding.ActivityMainBinding
 import org.json.JSONObject
 import java.io.File
@@ -39,6 +38,23 @@ class MainActivity : AppCompatActivity() {
     private val GITHUB_API_URL = "https://api.github.com/repos/xiaofeng1coin/jizhangxt/releases/latest"
     private var downloadID: Long = -1L
 
+    // 用于处理文件选择的回调
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
+
+    // ActivityResultLauncher，用于启动文件选择器并接收结果
+    private val fileChooserLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val data: Intent? = result.data
+            var results: Array<Uri>? = null
+            if (result.resultCode == RESULT_OK) {
+                if (data?.dataString != null) {
+                    results = arrayOf(Uri.parse(data.dataString))
+                }
+            }
+            filePathCallback?.onReceiveValue(results)
+            filePathCallback = null
+        }
+    
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
@@ -59,7 +75,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
+    
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
@@ -87,8 +103,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
-        
-        // Android 13 (API 33) 及以上版本需要动态声明 RECEIVER_EXPORTED 行为
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), RECEIVER_EXPORTED)
         } else {
@@ -97,12 +112,78 @@ class MainActivity : AppCompatActivity() {
 
         askForNotificationPermissionAndStartService()
 
-        binding.webView.webViewClient = WebViewClient()
-        binding.webView.settings.javaScriptEnabled = true
+        // 完整配置 WebView
+        setupWebView()
+
         binding.webView.postDelayed({
             binding.webView.loadUrl("http://127.0.0.1:5001")
         }, 1500)
     }
+    
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun setupWebView() {
+        binding.webView.apply {
+            webViewClient = WebViewClient() // 页面内跳转
+            settings.javaScriptEnabled = true // 启用 JS
+            settings.domStorageEnabled = true // 启用 DOM 存储
+
+            // 设置 DownloadListener来处理文件下载（导出功能）
+            setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+                try {
+                    val request = DownloadManager.Request(Uri.parse(url))
+                    request.setMimeType(mimeType)
+                    request.addRequestHeader("User-Agent", userAgent)
+                    request.setDescription("正在下载文件...")
+
+                    // 从 contentDisposition 中解析文件名
+                    val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+                    request.setTitle(fileName)
+
+                    request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                    
+                    val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+                    dm.enqueue(request)
+                    Toast.makeText(applicationContext, "开始下载: $fileName", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(applicationContext, "下载失败: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            // 设置 WebChromeClient 来处理文件上传（导入功能）
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    webView: WebView?,
+                    filePathCallback: ValueCallback<Array<Uri>>?,
+                    fileChooserParams: FileChooserParams?
+                ): Boolean {
+                    // 如果有正在进行的文件选择，先取消它
+                    this@MainActivity.filePathCallback?.onReceiveValue(null)
+                    this@MainActivity.filePathCallback = filePathCallback
+                    
+                    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        // 使用参数中的 accept-types 来限定文件类型
+                        type = if (fileChooserParams?.acceptTypes?.isNotEmpty() == true && fileChooserParams.acceptTypes[0].isNotEmpty()) {
+                            fileChooserParams.acceptTypes[0]
+                        } else {
+                            "*/*"
+                        }
+                    }
+                    
+                    try {
+                        fileChooserLauncher.launch(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this@MainActivity, "无法打开文件选择器", Toast.LENGTH_SHORT).show()
+                        return false
+                    }
+                    return true // 返回 true 表示我们已经处理了这次请求
+                }
+            }
+        }
+    }
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -112,8 +193,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
         return true
-    }
-
+    }    
+    
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_check_update -> {
@@ -225,7 +306,7 @@ class MainActivity : AppCompatActivity() {
             showToastOnUI("下载启动失败: ${e.message}")
         }
     }
-
+    
     private fun showInstallConfirmDialog() {
         runOnUiThread {
             AlertDialog.Builder(this)
@@ -259,12 +340,9 @@ class MainActivity : AppCompatActivity() {
         }
         installApkFromStoredID()
     }
-
-    // ======================== [ 这里是唯一的修改点 ] ========================
-    // 将下面的 installApkFromStoredID 函数完整替换掉你原来的版本
+    
     private fun installApkFromStoredID() {
         val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-        // 1. 使用 getUriForDownloadedFile 获取 content:// 格式的 Uri
         val apkContentUri: Uri? = downloadManager.getUriForDownloadedFile(downloadID)
         
         if (apkContentUri == null) {
@@ -272,19 +350,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // 2. 将 content:// Uri 传递给 FileProvider，让系统将其转换为可分享的 Uri
         val apkUriToInstall = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                // 这是将下载管理器的 content Uri 转换为 FileProvider 的 content Uri 的正确方式
-                apkContentUri
-            } catch (e: IllegalArgumentException) {
-                e.printStackTrace()
-                showToastOnUI("FileProvider 错误: ${e.localizedMessage}")
-                return
-            }
+            apkContentUri
         } else {
-             // 对于旧版本，我们仍然需要从 content uri 获取真实路径
-            var apkFile: File? = null
+             var apkFile: File? = null
             val cursor = contentResolver.query(apkContentUri, arrayOf(DownloadManager.COLUMN_LOCAL_FILENAME), null, null, null)
             cursor?.use { 
                 if (it.moveToFirst()) {
@@ -300,15 +369,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        // 3. 创建安装 Intent
         val installIntent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(apkUriToInstall, "application/vnd.android.package-archive")
-            // 必须授予读取权限，否则安装程序无法读取文件
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        // 4. 启动安装
         try {
              startActivity(installIntent)
         } catch (e: Exception) {
@@ -316,7 +382,6 @@ class MainActivity : AppCompatActivity() {
             showToastOnUI("无法启动安装程序: ${e.localizedMessage}")
         }
     }
-    // ======================== [ 修改结束 ] ========================
 
     private fun isNewerVersion(newVersion: String, oldVersion: String): Boolean {
        val newParts = newVersion.split('.').map { it.toIntOrNull() ?: 0 }
