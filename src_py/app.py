@@ -1,4 +1,4 @@
-# 文件: app.py（兼容安卓 & Docker）
+# 文件: app.py（最终修复版 - 修正缩进）
 import json
 import uuid
 import csv
@@ -11,7 +11,7 @@ from datetime import datetime, date
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory
 from markupsafe import escape
-
+ 
 # ------------------------------------------------------------
 # 环境初始化（日志始终写入 log_capture_string）
 # ------------------------------------------------------------
@@ -20,12 +20,12 @@ IS_ANDROID = False
 DATA_DIR = None
 DATA_FILE = None
 log_capture_string = io.StringIO()
-
+ 
 def _initialize_app_env():
     global _env_initialized, IS_ANDROID, DATA_DIR, DATA_FILE
     if _env_initialized:
         return
-
+ 
     # 尝试获取 Android 上下文
     try:
         from com.chaquo.python import android
@@ -37,9 +37,9 @@ def _initialize_app_env():
     except Exception:
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         IS_ANDROID = False
-
+ 
     # 统一日志配置：始终写入 log_capture_string
-root_logger = logging.getLogger()
+    root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
@@ -54,7 +54,7 @@ root_logger = logging.getLogger()
     NEW_DATA_DIR = os.path.join(BASE_DIR, 'user_data') # <-- 使用一个不会冲突的新名字
  
     # 2. 添加一次性迁移逻辑
-    #    如果旧目录存在，而新目录不存在，说明是老用户第一次更新到此版本，需要迁移数据
+    #    如果旧目录存在，而新目录不存在，说明是老用户第一次更新到此版本，需要迁移数据。
     if IS_ANDROID and os.path.isdir(OLD_DATA_DIR) and not os.path.isdir(NEW_DATA_DIR):
         try:
             logging.info(f"DIAGNOSTIC: Found old data at '{OLD_DATA_DIR}'. Migrating to '{NEW_DATA_DIR}'.")
@@ -64,7 +64,6 @@ root_logger = logging.getLogger()
         except OSError as e:
             # 记录严重错误，但程序继续，以避免应用崩溃
             logging.critical(f"FATAL: Failed to migrate data from old directory: {e}", exc_info=True)
-            # 即使迁移失败，后续逻辑也会在新的、安全的目录中创建新数据，防止覆盖旧数据
  
     # 3. 统一使用新的、安全的路径进行初始化
     DATA_DIR = NEW_DATA_DIR
