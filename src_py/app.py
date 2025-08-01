@@ -460,13 +460,18 @@ def import_json():
 
 @app.route('/debuglog')
 def debug_log():
+    _initialize_app_env()  # 确保环境初始化
     user_agent = request.headers.get('User-Agent', '').lower()
 
-    # 判断是否为安卓设备浏览器（非App WebView）
-    is_mobile = any(k in user_agent for k in ['android', 'iphone', 'ipad'])
+    # ✅ 判断是否为安卓浏览器（非 WebView）
+    is_android_browser = 'android' in user_agent and 'wv' not in user_agent
 
     if not is_android_browser:
-        return "<pre>Debug log 仅支持安卓浏览器访问。</pre>", 404
+        return "<pre>Debug log is only available on Android browser.</pre>", 404
+
+    # ✅ 下面是你原有的日志渲染逻辑
+    if not IS_ANDROID:
+        return "<pre>Debug log is only available in the Android APK environment.</pre>", 404
 
     html_head = '''
     <head>
@@ -527,10 +532,9 @@ def debug_log():
  
 @app.route('/debuglog/clear', methods=['POST'])
 def clear_debug_log():
+    _initialize_app_env()
     user_agent = request.headers.get('User-Agent', '').lower()
-
-    # 判断是否来自安卓浏览器（非App WebView）
-    is_mobile = any(k in user_agent for k in ['android', 'iphone', 'ipad'])
+    is_android_browser = 'android' in user_agent and 'wv' not in user_agent
 
     if not is_android_browser:
         return "Access denied: only available from Android browser.", 403
