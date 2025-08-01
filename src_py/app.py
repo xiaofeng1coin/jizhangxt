@@ -1,5 +1,5 @@
-# 文件: app.py (最终修复版 - 修复安卓和Docker日志)
-
+# 文件: app.py (adb 诊断版)
+ 
 import json
 import uuid
 import csv
@@ -7,14 +7,14 @@ import io
 import os
 import logging
 import sys
+import traceback  # <--- 导入 traceback
 from datetime import datetime, date
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory
 from markupsafe import escape
-
-# --- [最终修复] 全新的、环境感知的日志和路径系统 ---
  
-# 1. 关键变化：将所有环境相关的初始化逻辑移入一个独立的函数中
+# --- [adb 诊断] 环境初始化 ---
+ 
 _env_initialized = False
 IS_ANDROID = False
 DATA_DIR = None
@@ -22,57 +22,52 @@ DATA_FILE = None
 log_capture_string = io.StringIO()
  
 def _initialize_app_env():
-    """
-    执行一次性的、延迟的环境初始化。
-    这是解决启动时崩溃的核心，确保只在应用完全就绪后才调用安卓API。
-    """
     global _env_initialized, IS_ANDROID, DATA_DIR, DATA_FILE, log_capture_string
     if _env_initialized:
         return
  
     try:
-        # 只有当这个函数被调用时，我们才尝试访问 Chaquopy 的功能
+        # --- 尝试检测安卓环境 ---
         from com.chaquo.python.android import AndroidPlatform
         context = AndroidPlatform.getApplication()
-        
-        # 这一步现在应该会成功
+        if context is None:
+            raise ValueError("Android context is null.")
+            
         BASE_DIR = context.getFilesDir().toString()
         IS_ANDROID = True
         
-        # --- 安卓环境下的日志配置 ---
+        # 安卓日志配置 (保持不变)
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.INFO)
         handler = logging.StreamHandler(log_capture_string)
         formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
         handler.setFormatter(formatter)
-        
-        # 避免重复添加 handler
-        if root_logger.hasHandlers():
-            root_logger.handlers.clear()
+        if root_logger.hasHandlers(): root_logger.handlers.clear()
         root_logger.addHandler(handler)
-        logging.info("Logger configured for Android environment.")
         
-    except Exception:
-        # 如果失败，则我们处于本地电脑或 Docker 环境
+    except Exception as e:
+        # --- [关键修改] 如果失败，打印详细错误到标准输出 ---
+        # adb logcat 会捕获这些 print 输出
+        print("--- PYTHON INITIALIZATION ERROR ---", file=sys.stderr)
+        print(f"Error Type: {type(e).__name__}", file=sys.stderr)
+        print(f"Error Message: {e}", file=sys.stderr)
+        print("Traceback:", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("-----------------------------------", file=sys.stderr)
+        # --- [修改结束] ---
+        
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         IS_ANDROID = False
         
-        # --- 非安卓环境的日志配置 ---
-        logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s | %(levelname)-8s | %(message)s',
-                            stream=sys.stdout,
-                            force=True) # force=True 确保配置生效
-                        
-        logging.info("Logger configured for non-Android environment (Docker/Local).")
+        # 非安卓日志配置 (保持不变)
+        logging.basicConfig(level=logging.INFO, stream=sys.stdout, force=True)
  
-    # 初始化路径变量
+    # 后续路径初始化 (保持不变)
     DATA_DIR = os.path.join(BASE_DIR, 'data')
     DATA_FILE = os.path.join(DATA_DIR, 'data.json')
  
-    # 确保数据目录存在
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR, exist_ok=True)
-        logging.info(f"Created data directory at: {DATA_DIR}")
     
     _env_initialized = True
  
