@@ -97,9 +97,9 @@ chaquopy {
             }
         }
         pip {
-            #install("Flask")
-            #install("PyYAML")
-            #install("requests")
+            //install("Flask")
+            //install("PyYAML")
+            //install("requests")
                 install("-r", "requirements.txt")
         }
     }
