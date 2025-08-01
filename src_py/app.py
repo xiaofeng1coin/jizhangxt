@@ -13,7 +13,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, Res
 from markupsafe import escape
  
 # ------------------------------------------------------------
-# 环境初始化（日志始终写入 log_capture_string）
+# 环境初始化（日志始终写入log_capture_string）
 # ------------------------------------------------------------
 _env_initialized = False
 IS_ANDROID = False
