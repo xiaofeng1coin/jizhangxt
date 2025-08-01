@@ -1,5 +1,4 @@
-# 文件: app.py (adb 诊断版)
- 
+# 文件: app.py（兼容安卓 & Docker）
 import json
 import uuid
 import csv
@@ -7,96 +6,71 @@ import io
 import os
 import logging
 import sys
-import traceback  # <--- 导入 traceback
+import traceback
 from datetime import datetime, date
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory
 from markupsafe import escape
- 
-# --- [adb 诊断] 环境初始化 ---
- 
+
+# ------------------------------------------------------------
+# 环境初始化（日志始终写入 log_capture_string）
+# ------------------------------------------------------------
 _env_initialized = False
 IS_ANDROID = False
 DATA_DIR = None
 DATA_FILE = None
 log_capture_string = io.StringIO()
- 
+
 def _initialize_app_env():
-    """
-    执行一次性的环境初始化。
-    """
-    global _env_initialized, IS_ANDROID, DATA_DIR, DATA_FILE, log_capture_string
+    global _env_initialized, IS_ANDROID, DATA_DIR, DATA_FILE
     if _env_initialized:
         return
- 
+
+    # 尝试获取 Android 上下文
     try:
-        # --- [关键修复] ---
-        # 1. 导入正确的模块
         from com.chaquo.python import android
- 
-        # 2. 使用正确的方式获取 context
         context = android.get_application()
-        # --- [修复结束] ---
-        
         if context is None:
-            raise ValueError("Android context is null. Chaquopy may not be ready.")
- 
+            raise ValueError("Android context is null.")
         BASE_DIR = context.getFilesDir().toString()
         IS_ANDROID = True
-        
-        # 安卓日志配置 (保持不变)
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler(log_capture_string)
-        formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
-        handler.setFormatter(formatter)
-        if root_logger.hasHandlers(): root_logger.handlers.clear()
-        root_logger.addHandler(handler)
-        
-    except Exception as e:
-        # --- [关键修改] 如果失败，打印详细错误到标准输出 ---
-        # adb logcat 会捕获这些 print 输出
-        print("--- PYTHON INITIALIZATION ERROR ---", file=sys.stderr)
-        print(f"Error Type: {type(e).__name__}", file=sys.stderr)
-        print(f"Error Message: {e}", file=sys.stderr)
-        print("Traceback:", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        print("-----------------------------------", file=sys.stderr)
-        # --- [修改结束] ---
-        
+    except Exception:
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         IS_ANDROID = False
-        
-        # 非安卓日志配置 (保持不变)
-        logging.basicConfig(level=logging.INFO, stream=sys.stdout, force=True)
- 
-    # 后续路径初始化 (保持不变)
+
+    # 统一日志配置：始终写入 log_capture_string
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    if root_logger.hasHandlers():
+        root_logger.handlers.clear()
+    handler = logging.StreamHandler(log_capture_string)
+    formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
+    handler.setFormatter(formatter)
+    root_logger.addHandler(handler)
+
+    # 路径初始化
     DATA_DIR = os.path.join(BASE_DIR, 'data')
     DATA_FILE = os.path.join(DATA_DIR, 'data.json')
- 
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR, exist_ok=True)
-    
+    os.makedirs(DATA_DIR, exist_ok=True)
     _env_initialized = True
  
 # --- Flask 应用初始化 ---
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
  
-# --- 核心辅助函数 ---
+# ------------------------------------------------------------
+# 通用辅助函数
+# ------------------------------------------------------------
 def is_mobile():
-    """检测请求是否来自移动设备。"""
-    _initialize_app_env() # 确保 IS_ANDROID 已被正确设置
+    _initialize_app_env()
     user_agent = request.headers.get('User-Agent', '').lower()
     if IS_ANDROID:
         return True
-    mobile_keywords = ['mobi', 'android', 'iphone', 'ipod', 'ipad', 'windows phone', 'blackberry']
-    return any(keyword in user_agent for keyword in mobile_keywords)
- 
+    return any(k in user_agent for k in ['mobi', 'android', 'iphone', 'ipod', 'ipad', 'windows phone', 'blackberry'])
+
 @app.context_processor
 def inject_global_vars():
-    """为所有模板注入全局变量，减少重复代码。"""
-    _initialize_app_env() # 确保环境已初始化
+    _initialize_app_env()
     data = load_data()
     return {
         'current_year': datetime.now().year,
@@ -105,33 +79,30 @@ def inject_global_vars():
         'default_income_categories': data['categories']['income']
     }
  
-# --- 数据处理辅助函数 (关键修改) ---
+# ------------------------------------------------------------
+# 数据 IO
+# ------------------------------------------------------------
 def save_data(data):
-    """将数据结构以美化的JSON格式保存到文件。"""
-    _initialize_app_env() # 在使用 DATA_FILE 前，确保它已经被初始化
+    _initialize_app_env()
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
- 
+
 def load_data():
-    """加载数据文件。如果不存在或损坏，则创建并返回一个纯净的初始结构。"""
-    _initialize_app_env() # 在使用 DATA_FILE 前，确保它已经被初始化
+    _initialize_app_env()
     initial_data = {
         "records": [],
         "categories": {"expense": [], "income": []},
         "budgets": {}
     }
-    
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
             data.setdefault('records', [])
-            categories = data.setdefault('categories', {})
-            categories.setdefault('expense', [])
-            categories.setdefault('income', [])
+            data.setdefault('categories', {}).setdefault('expense', [])
+            data.setdefault('categories', {}).setdefault('income', [])
             data.setdefault('budgets', {})
             return data
     except (FileNotFoundError, json.JSONDecodeError):
-        logging.warning(f"Data file not found or corrupted at {DATA_FILE}. Creating a new one.")
         save_data(initial_data)
         return initial_data
 
@@ -460,6 +431,7 @@ def import_json():
 
 @app.route('/debuglog')
 def debug_log():
+    _initialize_app_env()
     html_head = '''
     <head>
         <title>App Debug Log</title>
@@ -479,46 +451,40 @@ def debug_log():
         </style>
     </head>
     '''
- 
     log_contents = log_capture_string.getvalue()
-    
-    colored_log_lines = []
+    colored = []
     for line in log_contents.splitlines():
-        escaped_line = escape(line)
-        if " | ERROR " in escaped_line:
-            colored_log_lines.append(f'<span class="ERROR">{escaped_line}</span>')
-        elif " | WARNING " in escaped_line:
-            colored_log_lines.append(f'<span class="WARNING">{escaped_line}</span>')
-        elif " | CRITICAL" in escaped_line:
-            colored_log_lines.append(f'<span class="CRITICAL">{escaped_line}</span>')
-        elif "DIAGNOSTIC:" in escaped_line:
-            colored_log_lines.append(f'<span class="DIAGNOSTIC">{escaped_line}</span>')
+        escaped = escape(line)
+        if " | ERROR " in escaped:
+            colored.append(f'<span class="ERROR">{escaped}</span>')
+        elif " | WARNING " in escaped:
+            colored.append(f'<span class="WARNING">{escaped}</span>')
+        elif " | CRITICAL" in escaped:
+            colored.append(f'<span class="CRITICAL">{escaped}</span>')
+        elif "DIAGNOSTIC:" in escaped:
+            colored.append(f'<span class="DIAGNOSTIC">{escaped}</span>')
         else:
-            colored_log_lines.append(f'<span class="INFO">{escaped_line}</span>')
-    
-    colored_logs = "<br>".join(colored_log_lines)
-    
+            colored.append(f'<span class="INFO">{escaped}</span>')
+    colored_logs = "<br>".join(colored)
     return f"""
-    <html>
-        {html_head}
-        <body>
-            <div class="controls">
-                <form method="POST" action="/debuglog/clear" style="display:inline;">
-                    <button type="submit">清空日志</button>
-                </form>
-                <button onclick="location.reload()">刷新</button>
-            </div>
-            <h1>应用后端实时日志</h1>
-            <pre>{colored_logs}</pre>
-            <script>
-                window.scrollTo(0, document.body.scrollHeight);
-            </script>
-        </body>
+    <html>{html_head}
+    <body>
+        <div class="controls">
+            <form method="POST" action="/debuglog/clear" style="display:inline;">
+                <button type="submit">清空日志</button>
+            </form>
+            <button onclick="location.reload()">刷新</button>
+        </div>
+        <h1>应用后端实时日志</h1>
+        <pre>{colored_logs}</pre>
+        <script>window.scrollTo(0, document.body.scrollHeight);</script>
+    </body>
     </html>
     """
- 
+
 @app.route('/debuglog/clear', methods=['POST'])
 def clear_debug_log():
+    _initialize_app_env()
     log_capture_string.truncate(0)
     log_capture_string.seek(0)
     logging.info("DIAGNOSTIC: Log has been manually cleared by user.")
