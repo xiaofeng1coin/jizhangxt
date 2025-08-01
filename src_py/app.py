@@ -22,17 +22,25 @@ DATA_FILE = None
 log_capture_string = io.StringIO()
  
 def _initialize_app_env():
+    """
+    执行一次性的环境初始化。
+    """
     global _env_initialized, IS_ANDROID, DATA_DIR, DATA_FILE, log_capture_string
     if _env_initialized:
         return
  
     try:
-        # --- 尝试检测安卓环境 ---
-        from com.chaquo.python.android import AndroidPlatform
-        context = AndroidPlatform.getApplication()
+        # --- [关键修复] ---
+        # 1. 导入正确的模块
+        from com.chaquo.python import android
+ 
+        # 2. 使用正确的方式获取 context
+        context = android.get_application()
+        # --- [修复结束] ---
+        
         if context is None:
-            raise ValueError("Android context is null.")
-            
+            raise ValueError("Android context is null. Chaquopy may not be ready.")
+ 
         BASE_DIR = context.getFilesDir().toString()
         IS_ANDROID = True
         
