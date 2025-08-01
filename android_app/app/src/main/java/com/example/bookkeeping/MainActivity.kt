@@ -1,5 +1,5 @@
 // 文件路径: app/src/main/java/com/example/bookkeeping/MainActivity.kt
-// (这是修复了文件选择器崩溃问题的最终版本)
+// (最终修复版：使用通用文件选择器，提高兼容性)
 
 package com.example.bookkeeping
 
@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             webChromeClient = object : WebChromeClient() {
-                // ================== [ 关键修改区域 ] ==================
+                // ================== [ 最终修复区域 ] ==================
                 override fun onShowFileChooser(
                     webView: WebView?,
                     filePathCallback: ValueCallback<Array<Uri>>?,
@@ -155,25 +155,27 @@ class MainActivity : AppCompatActivity() {
                     this@MainActivity.filePathCallback?.onReceiveValue(null)
                     this@MainActivity.filePathCallback = filePathCallback
                     
-                    val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = fileChooserParams?.acceptTypes?.firstOrNull() ?: "*/*"
-                    }
-                    
                     try {
-                        fileChooserLauncher.launch(intent)
-                    } catch (e: Exception) {
-                        // 异常处理：提供更详细的错误信息，并正确取消回调
-                        Toast.makeText(this@MainActivity, "无法打开文件选择器: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        // 1. 创建一个通用的文件获取Intent，而不是指定特定MIME类型
+                        val contentSelectionIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*" // 使用最通用的类型，确保所有文件管理器都能响应
+                        }
                         
-                        // [核心修复] 必须通知WebView操作已取消，否则会导致崩溃
+                        // 2. 使用 Intent.createChooser 包装Intent，强制显示选择器
+                        val chooserIntent = Intent.createChooser(contentSelectionIntent, "选择一个JSON文件")
+                        
+                        // 3. 启动这个包装后的Chooser Intent
+                        fileChooserLauncher.launch(chooserIntent)
+
+                    } catch (e: Exception) {
+                        Toast.makeText(this@MainActivity, "无法打开文件选择器: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                         this@MainActivity.filePathCallback?.onReceiveValue(null)
                         this@MainActivity.filePathCallback = null
                     }
-                    // 始终返回true，表示我们已经处理了此事件（无论是成功启动还是捕获异常）
                     return true
                 }
-                 // ================== [ 修改结束 ] ==================
+                 // ================== [ 修复结束 ] ==================
             }
         }
     }
