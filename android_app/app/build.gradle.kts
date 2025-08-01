@@ -97,10 +97,11 @@ chaquopy {
             }
         }
         pip {
-            //install("Flask")
-            //install("PyYAML")
-            //install("requests")
-                install("-r", File(project.projectDir, "../../src_py/requirements.txt"))
+            install("Flask")
+            install("PyYAML")
+            install("requests")
+            install("Werkzeug")
+                //install("-r", File(project.projectDir, "../../src_py/requirements.txt"))
         }
     }
 }
