@@ -89,6 +89,13 @@ android {
 chaquopy {
     defaultConfig {
         buildPython("python3.11")
+        sourceSets {
+            getByName("main") {
+                // `srcDir` 的路径是相对于 `android_app` 模块的，
+                // 所以我们用 "../src_py" 来指向与 `android_app` 同级的 `src_py` 目录。
+                srcDir(File(project.projectDir, "../src_py"))
+            }
+        }
         pip {
             install("Flask")
             install("PyYAML")
