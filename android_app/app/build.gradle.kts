@@ -100,7 +100,7 @@ chaquopy {
             //install("Flask")
             //install("PyYAML")
             //install("requests")
-                install("-r", "requirements.txt")
+                install("-r", File(project.projectDir, "../../src_py/requirements.txt"))
         }
     }
 }
