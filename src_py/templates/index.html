@@ -5,12 +5,12 @@
 {% block content %}
 <section class="summary-cards">
     <div class="summary-card">
-        <h4>今日收支</h4>
+        <h4>当日收支 ({{ selected_date }})</h4> {# 可选：在标题中显示日期 #}
         <p class="income">+ ¥ {{ '%.2f'|format(daily_income) }}</p>
         <p class="expense">- ¥ {{ '%.2f'|format(daily_expense) }}</p>
     </div>
     <div class="summary-card">
-        <h4>本月收支</h4>
+        <h4>本月收支 ({{ selected_date[:7] }})</h4> {# 可选：在标题中显示月份 #}
         <p class="income">+ ¥ {{ '%.2f'|format(monthly_income_total) }}</p>
         <p class="expense">- ¥ {{ '%.2f'|format(monthly_expense_total) }}</p>
     </div>
@@ -44,7 +44,8 @@
                 </datalist>
             </div>
             <div class="form-group">
-                  <input type="date" id="date" name="date" value="{{ today_for_form }}">
+                  <!-- 【核心修改 1/2】: value 改为 selected_date 来显示当前查看的日期 -->
+                  <input type="date" id="date" name="date" value="{{ selected_date }}">
             </div>
             <div class="form-group">
                 <input type="text" name="description" placeholder="写点备注... (可选)">
@@ -91,8 +92,10 @@
     </div>
 </section>
 
+<!-- 【核心修改 2/2】: 添加 JavaScript 脚本 -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- 原有脚本：切换收支类别 ---
     const typeExpenseRadio = document.getElementById('type_expense');
     const typeIncomeRadio = document.getElementById('type_income');
     const categoryInput = document.getElementById('category-input');
@@ -109,6 +112,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     typeExpenseRadio.addEventListener('change', updateCategoryInput);
     typeIncomeRadio.addEventListener('change', updateCategoryInput);
+
+    // --- 新增脚本：当日期改变时，刷新页面 ---
+    const dateSelector = document.getElementById('date');
+    if (dateSelector) {
+        dateSelector.addEventListener('change', function() {
+            const newDate = this.value;
+            // 构建新的URL并跳转，触发后端重新加载数据
+            window.location.href = `{{ url_for('index') }}?selected_date=${newDate}`;
+        });
+    }
 });
 </script>
 {% endblock %}

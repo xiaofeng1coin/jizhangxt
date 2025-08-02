@@ -191,3 +191,106 @@ body.nav-open .menu-toggle span:nth-child(3) { transform: translateY(-8px) rotat
 .swal2-popup.swal2-modal .swal2-html-container { color: var(--text-secondary) !important; }
 .swal2-popup.swal2-modal .swal2-confirm { background-color: var(--primary) !important; border-radius: 8px !important; }
 .swal2-popup.swal2-modal .swal2-cancel { background-color: var(--bg-main) !important; color: var(--text-secondary) !important; border-radius: 8px !important; }
+/* ... (文件原有内容) ... */
+
+/* --- 6. 第三方库 & 杂项 (3rd Party & Misc) --- */
+/* SweetAlert2 Toast Notifications */
+.swal2-toast { background: #1e1e1e !important; color: #e0e0e0 !important; box-shadow: var(--shadow-medium) !important; }
+.swal2-toast .swal2-title { color: #e0e0e0 !important; }
+/* SweetAlert2 Modal Confirmation */
+.swal2-popup.swal2-modal { background: var(--bg-content) !important; color: var(--text-primary) !important; border-radius: var(--border-radius-main) !important; }
+.swal2-popup.swal2-modal .swal2-title { color: var(--text-primary) !important; }
+.swal2-popup.swal2-modal .swal2-html-container { color: var(--text-secondary) !important; }
+.swal2-popup.swal2-modal .swal2-confirm { background-color: var(--primary) !important; border-radius: 8px !important; }
+.swal2-popup.swal2-modal .swal2-cancel { background-color: var(--bg-main) !important; color: var(--text-secondary) !important; border-radius: 8px !important; }
+
+/* 【新增】开关样式 */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 26px;
+    flex-shrink: 0;
+}
+.toggle-switch input { display: none; }
+.toggle-switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--border-color);
+    transition: .3s;
+    border-radius: 26px;
+}
+.toggle-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.toggle-switch input:checked + .slider {
+    background-color: var(--primary);
+}
+.toggle-switch input:checked + .slider:before {
+    transform: translateX(18px);
+}
+/* --- 5.1 Dashboard (index.html) - 新增样式 --- */
+
+/* 移除 hero block 的静态 label 文本，因为它被新选择器替代了 */
+.header-block .label { 
+    display: none; 
+}
+
+/* 月份选择器的外层容器，用于居中 */
+.month-selector-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+/* 用户看到的、可以点击的“按钮”样式 */
+.month-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: rgba(0, 0, 0, 0.05); /* 非常淡的背景 */
+    border-radius: 99px; /* 圆角胶囊形状 */
+    cursor: pointer;
+    transition: background-color 0.2s;
+    -webkit-tap-highlight-color: transparent; /* 移除移动端点击时的高光 */
+}
+
+.month-display:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* 月份文本的样式 */
+.month-display span {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* 下拉箭头图标的样式 */
+.month-display svg {
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+}
+
+/* 一个小交互：点击时图标稍微旋转一下 */
+.month-display:active svg {
+    transform: translateY(2px);
+}
+
+
+/* 修正 hero 金额的上边距，使其与新选择器更协调 */
+.header-block .amount-hero {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+}

@@ -9,7 +9,7 @@
 <div class="content-card form-card">
     <form action="{{ url_for('edit_record', record_id=record.id) if record else url_for('add_record') }}" method="post" class="modern-form">
         
-        <!-- 【样式重做】支出/收入选择器 -->
+        <!-- 支出/收入选择器 -->
         <div class="type-segmented-control">
             <input type="radio" id="type_expense" name="type" value="expense" {% if not record or record.type == 'expense' %}checked{% endif %}>
             <label for="type_expense" class="tab-expense">支出</label>
@@ -23,7 +23,7 @@
             <input type="number" step="0.01" id="amount" name="amount" placeholder="0.00" value="{{ record.amount if record else '' }}" required>
         </div>
 
-        <!-- 【功能新增】类别选择（支持自定义） -->
+        <!-- 类别选择（支持自定义） -->
         <div class="form-group">
             <label for="category">类别</label>
             <select id="category" name="category" required>
@@ -31,7 +31,7 @@
             </select>
         </div>
         
-        <!-- 【功能新增】自定义类别输入框 (默认隐藏) -->
+        <!-- 自定义类别输入框 (默认隐藏) -->
         <div class="form-group" id="custom-category-wrapper" style="display: none;">
             <label for="custom-category-input">自定义类别名称</label>
             <input type="text" id="custom-category-input" name="custom_category_input" placeholder="输入一次性类别">
@@ -41,7 +41,8 @@
         <div class="form-row">
             <div class="form-group">
                 <label for="date">日期</label>
-                <input type="date" id="date" name="date" value="{{ record.date if record else today_for_form }}">
+                <!-- 【核心修改】在添加时使用新日期变量，编辑时使用记录自己的日期 -->
+                <input type="date" id="date" name="date" value="{{ record.date if record else date_for_new_record }}">
             </div>
             <div class="form-group">
                 <label for="description">备注</label>

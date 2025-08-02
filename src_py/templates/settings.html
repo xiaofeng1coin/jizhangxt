@@ -1,6 +1,21 @@
 {% extends 'layout.html' %}
 {% block title %}设置 - 时光账单{% endblock %}
-{% block head_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">{% endblock %}
+{% block head_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+<style>
+/* 【新增】开关样式 */
+.settings-card .toggle-switch-container { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0.5rem; }
+.settings-card .toggle-switch-container label { font-weight: 500; cursor: pointer; }
+.settings-card .toggle-switch-container .description { font-size: 0.85rem; color: var(--text-muted); font-weight: normal; margin: 0.25rem 0 0; }
+.toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; flex-shrink: 0; margin-left: 1rem; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--gray-200); transition: .3s; border-radius: 28px; }
+.toggle-switch .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle-switch input:checked + .slider { background-color: var(--primary-color); }
+.toggle-switch input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
+.toggle-switch input:checked + .slider:before { transform: translateX(22px); }
+</style>
+{% endblock %}
 
 {% block content %}
 <section class="settings-section">
@@ -17,10 +32,7 @@
                         {% for cat in categories.expense %}
                         <li>
                             <span>{{ cat }}</span>
-                            <!-- 【核心修改】添加 class 和 data-* 属性 -->
-                            <form action="{{ url_for('delete_category') }}" method="post" class="delete-form"
-                                  data-message="确定要删除支出类别 '{{ cat }}' 吗？"
-                                  data-detail="删除后，相关的预算设置也会被移除。此操作无法撤销。">
+                            <form action="{{ url_for('delete_category') }}" method="post" class="delete-form" data-message="确定要删除支出类别 '{{ cat }}' 吗？" data-detail="删除后，相关的预算设置也会被移除。此操作无法撤销。">
                                 <input type="hidden" name="type" value="expense">
                                 <input type="hidden" name="category" value="{{ cat }}">
                                 <button type="submit" class="btn-delete-sm" title="删除类别">&times;</button>
@@ -41,10 +53,7 @@
                          {% for cat in categories.income %}
                         <li>
                             <span>{{ cat }}</span>
-                             <!-- 【核心修改】添加 class 和 data-* 属性 -->
-                             <form action="{{ url_for('delete_category') }}" method="post" class="delete-form"
-                                   data-message="确定要删除收入类别 '{{ cat }}' 吗？"
-                                   data-detail="此操作无法撤销。">
+                             <form action="{{ url_for('delete_category') }}" method="post" class="delete-form" data-message="确定要删除收入类别 '{{ cat }}' 吗？" data-detail="此操作无法撤销。">
                                 <input type="hidden" name="type" value="income">
                                 <input type="hidden" name="category" value="{{ cat }}">
                                 <button type="submit" class="btn-delete-sm" title="删除类别">&times;</button>
@@ -76,12 +85,11 @@
                     </li>
                     {% endfor %}
                 </ul>
-                <!-- 添加一个隐藏的input或name到button，以便后端区分是哪个表单提交的 -->
                 <button type="submit" name="budget_save" value="1" class="btn-submit">保存预算</button>
              </form>
         </div>
  
-        <!-- 【新增】数据导入与导出 -->
+        <!-- 数据导入与导出 -->
         <div class="settings-card">
             <h2>数据管理</h2>
             <div class="data-management">
@@ -101,7 +109,25 @@
                 </form>
             </div>
         </div>
-        
+
+        <!-- 【新增】通用设置卡片 -->
+        <div class="settings-card">
+            <h2>通用设置</h2>
+            <form action="{{ url_for('toggle_keep_date') }}" method="post">
+                <div class="toggle-switch-container">
+                    <div>
+                        <label for="keep_last_date">补录模式 (保持上次日期)</label>
+                        <p class="description">开启后，记账日期不会自动跳回今天。</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="keep_last_date" name="keep_last_date" 
+                               {% if settings.keep_last_date %}checked{% endif %} 
+                               onchange="this.form.submit()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </form>
+        </div>
     </div>
 </section>
 {% endblock %}

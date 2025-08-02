@@ -3,9 +3,31 @@
 {% block page_title %}仪表盘{% endblock %}
 
 {% block content %}
+<!-- 主要数据显示区域 (UI/UX 全面升级) -->
 <div class="header-block">
-    <p class="label">本月净结余</p>
+
+    <!-- 【核心改造】将月份选择器与标题融为一体 -->
+    <div class="month-selector-wrapper">
+        <form id="month-selector-form" method="get" action="{{ url_for('index') }}">
+            <!-- 这个 label 是用户看到和点击的“按钮” -->
+            <label for="month-picker" class="month-display">
+                <span>{{ selected_month }}</span>
+                <!-- 下拉箭头图标 -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </label>
+            <!-- 真正的 input 控件被隐藏，但功能正常 -->
+            <input type="month" id="month-picker" name="selected_month" value="{{ selected_month }}" 
+                   onchange="document.getElementById('month-selector-form').submit()"
+                   style="position: absolute; opacity: 0; width: 0; height: 0;">
+        </form>
+    </div>
+
+    <!-- 净结余金额 -->
     <p class="amount-hero">¥{{ '%.2f'|format(monthly_savings) }}</p>
+    
+    <!-- 收入与支出 -->
     <div class="sub-stats">
         <div>
             <span class="label">总收入</span>
@@ -18,6 +40,7 @@
     </div>
 </div>
 
+<!-- 操作区域保持不变 -->
 <div class="actions-grid">
     <a href="{{ url_for('add_form') }}" class="action-card primary">
         <span class="icon">+</span>
@@ -31,9 +54,11 @@
     </a>
 </div>
 
+<!-- 预算概览卡片 -->
 <div class="content-card">
     <div class="card-header">
-        <h3>预算概览</h3>
+        <!-- 【优化】标题也使用动态月份 -->
+        <h3>{{ selected_month }} 预算概览</h3>
         <a href="{{ url_for('settings') }}">管理</a>
     </div>
     {% if total_budget > 0 %}

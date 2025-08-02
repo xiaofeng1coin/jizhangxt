@@ -1,4 +1,4 @@
-# 文件: app.py（最终修复版 - 修正缩进）
+# 文件: app.py (最终修复版 - 增加日期记忆开关)
 import json
 import uuid
 import csv
@@ -9,12 +9,9 @@ import sys
 import traceback
 from datetime import datetime, date
 from collections import defaultdict
-from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, Response, send_from_directory, session
 from markupsafe import escape
- 
-# ------------------------------------------------------------
-# 环境初始化（日志始终写入log_capture_string）
-# ------------------------------------------------------------
+
 _env_initialized = False
 IS_ANDROID = False
 DATA_DIR = None
@@ -26,7 +23,6 @@ def _initialize_app_env():
     if _env_initialized:
         return
  
-    # 尝试获取 Android 上下文
     try:
         from com.chaquo.python import android
         context = android.get_application()
@@ -37,49 +33,43 @@ def _initialize_app_env():
     except Exception:
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         IS_ANDROID = False
- 
-    # 统一日志配置：始终写入 log_capture_string
+    
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
+ 
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
-    handler = logging.StreamHandler(log_capture_string)
+
     formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s')
-    handler.setFormatter(formatter)
-    root_logger.addHandler(handler)
  
-    # ==================== [ 核心修复与数据迁移逻辑 ] ====================
-    # 1. 定义旧的数据路径（可能与APK打包内容冲突）和新的安全路径
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+
+    string_io_handler = logging.StreamHandler(log_capture_string)
+    string_io_handler.setFormatter(formatter)
+    root_logger.addHandler(string_io_handler)
+
     OLD_DATA_DIR = os.path.join(BASE_DIR, 'data')
-    NEW_DATA_DIR = os.path.join(BASE_DIR, 'user_data') # <-- 使用一个不会冲突的新名字
- 
-    # 2. 添加一次性迁移逻辑
-    #    如果旧目录存在，而新目录不存在，说明是老用户第一次更新到此版本，需要迁移数据。
+    NEW_DATA_DIR = os.path.join(BASE_DIR, 'user_data')
+
     if IS_ANDROID and os.path.isdir(OLD_DATA_DIR) and not os.path.isdir(NEW_DATA_DIR):
         try:
             logging.info(f"DIAGNOSTIC: Found old data at '{OLD_DATA_DIR}'. Migrating to '{NEW_DATA_DIR}'.")
-            # 将旧目录重命名为新目录，完成数据迁移
             os.rename(OLD_DATA_DIR, NEW_DATA_DIR)
             logging.info("DIAGNOSTIC: Data migration successful.")
         except OSError as e:
-            # 记录严重错误，但程序继续，以避免应用崩溃
             logging.critical(f"FATAL: Failed to migrate data from old directory: {e}", exc_info=True)
- 
-    # 3. 统一使用新的、安全的路径进行初始化
+
     DATA_DIR = NEW_DATA_DIR
     DATA_FILE = os.path.join(DATA_DIR, 'data.json')
-    os.makedirs(DATA_DIR, exist_ok=True) # 确保目录存在
-    # ======================== [ 修复结束 ] ========================
- 
+    os.makedirs(DATA_DIR, exist_ok=True)
+
     _env_initialized = True
- 
-# --- Flask 应用初始化 ---
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
- 
-# ------------------------------------------------------------
-# 通用辅助函数
-# ------------------------------------------------------------
+
 def is_mobile():
     _initialize_app_env()
     user_agent = request.headers.get('User-Agent', '').lower()
@@ -89,18 +79,23 @@ def is_mobile():
 
 @app.context_processor
 def inject_global_vars():
+    """向所有模板注入全局变量"""
     _initialize_app_env()
     data = load_data()
+    
+    if data.get('settings', {}).get('keep_last_date', False) and 'last_used_date' in session:
+        date_for_new_record = session['last_used_date']
+    else:
+        date_for_new_record = datetime.now().strftime('%Y-%m-%d')
+
     return {
         'current_year': datetime.now().year,
         'today_for_form': datetime.now().strftime('%Y-%m-%d'),
+        'date_for_new_record': date_for_new_record, # 新增变量
         'default_expense_categories': data['categories']['expense'],
         'default_income_categories': data['categories']['income']
     }
  
-# ------------------------------------------------------------
-# 数据 IO
-# ------------------------------------------------------------
 def save_data(data):
     _initialize_app_env()
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
@@ -109,17 +104,18 @@ def save_data(data):
 def load_data():
     _initialize_app_env()
     
-    # === [ 核心修改 ] ===
-    # 当 data.json 文件不存在时，使用这个带有默认分类的结构来创建它
     initial_data = {
         "records": [],
         "categories": {
             "expense": ["交通"],
             "income": ["工资"]
         },
-        "budgets": {}
+        "budgets": {},
+        "settings": {
+            "keep_last_date": False
+        }
     }
-    # === [ 修改结束 ] ===
+
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -127,6 +123,7 @@ def load_data():
             data.setdefault('categories', {}).setdefault('expense', [])
             data.setdefault('categories', {}).setdefault('income', [])
             data.setdefault('budgets', {})
+            data.setdefault('settings', {}).setdefault('keep_last_date', False)
             return data
     except (FileNotFoundError, json.JSONDecodeError):
         save_data(initial_data)
@@ -139,13 +136,39 @@ def index():
     data = load_data()
     all_records = data['records']
     now = datetime.now()
-    current_month_str = now.strftime('%Y-%m')
+ 
+    # 【核心修改 1/2】: 智能判断月份来源
+    # 优先从移动端获取 'selected_month'
+    # 如果没有，则尝试从桌面端获取 'selected_date' 并中提取月份
+    # 如果都没有，则使用当前月份
+    selected_month_from_mobile = request.args.get('selected_month')
+    selected_date_from_desktop = request.args.get('selected_date')
+ 
+    if selected_month_from_mobile:
+        # 来源是移动端月份选择器
+        target_month_str = selected_month_from_mobile
+        # 为了兼容桌面版逻辑，我们从月份推算出一个日期字符串
+        selected_date_str = f"{target_month_str}-01" 
+    elif selected_date_from_desktop:
+        # 来源是桌面端日期选择器
+        selected_date_str = selected_date_from_desktop
+        try:
+            target_month_str = datetime.strptime(selected_date_str, '%Y-%m-%d').strftime('%Y-%m')
+        except ValueError: # 如果日期格式错误，回退
+            selected_date_str = now.strftime('%Y-%m-%d')
+            target_month_str = now.strftime('%Y-%m')
+    else:
+        # 没有任何参数，使用今天和本月
+        selected_date_str = now.strftime('%Y-%m-%d')
+        target_month_str = now.strftime('%Y-%m')
     
-    monthly_records = [r for r in all_records if r['date'].startswith(current_month_str)]
+    # 所有月度计算都基于最终确定的 target_month_str
+    monthly_records = [r for r in all_records if r['date'].startswith(target_month_str)]
     monthly_income_total = sum(r['amount'] for r in monthly_records if r['type'] == 'income')
     monthly_expense_total = sum(r['amount'] for r in monthly_records if r['type'] == 'expense')
     monthly_savings = monthly_income_total - monthly_expense_total
     
+    # 预算计算逻辑不变，它会自动使用正确的 monthly_records
     budgets = defaultdict(float, data.get('budgets', {}))
     monthly_expense_by_category = defaultdict(float)
     for record in monthly_records:
@@ -161,19 +184,21 @@ def index():
             budget_progress[category] = { "spent": spent_amount, "budget": budget_amount, "progress": min(progress_percent, 100), "overspent": spent_amount > budget_amount }
     
     overall_budget_progress = (monthly_expense_total / total_budget) * 100 if total_budget > 0 else 0
-
+ 
     if is_mobile():
+        # 【核心修改 2/2】: 将 target_month_str 传递给移动端模板
         return render_template('mobile/index.html',
                                monthly_savings=monthly_savings,
                                monthly_income_total=monthly_income_total,
                                monthly_expense_total=monthly_expense_total,
                                total_budget=total_budget,
                                overall_budget_progress=overall_budget_progress,
-                               budget_progress=budget_progress)
+                               budget_progress=budget_progress,
+                               selected_month=target_month_str) # <-- 新增变量
     else: 
-        today_str = now.strftime('%Y-%m-%d')
-        daily_income = sum(r['amount'] for r in all_records if r['date'] == today_str and r['type'] == 'income')
-        daily_expense = sum(r['amount'] for r in all_records if r['date'] == today_str and r['type'] == 'expense')
+        # 桌面端的日度计算（基于 selected_date_str）
+        daily_income = sum(r['amount'] for r in all_records if r['date'] == selected_date_str and r['type'] == 'income')
+        daily_expense = sum(r['amount'] for r in all_records if r['date'] == selected_date_str and r['type'] == 'expense')
         
         return render_template('index.html',
                                daily_income=daily_income, 
@@ -183,8 +208,9 @@ def index():
                                monthly_savings=monthly_savings,
                                total_budget=total_budget,
                                overall_budget_progress=overall_budget_progress,
-                               budget_progress=budget_progress)
-
+                               budget_progress=budget_progress,
+                               selected_date=selected_date_str) # 桌面版保持不变
+ 
 @app.route('/add')
 def add_form():
     """仅移动端使用的路由，用于显示添加记录的表单页。"""
@@ -192,7 +218,7 @@ def add_form():
         return render_template('mobile/edit_record.html', record=None)
     else:
         return redirect(url_for('index'))
-
+ 
 @app.route('/add_record', methods=['POST'])
 def add_record():
     data = load_data()
@@ -201,7 +227,7 @@ def add_record():
     except (ValueError, TypeError):
         flash('金额必须是有效的数字！', 'danger')
         return redirect(url_for('add_form') if is_mobile() else url_for('index'))
-
+ 
     category = ""
     if is_mobile():
         selected_category = request.form.get('category')
@@ -214,7 +240,7 @@ def add_record():
             category = selected_category
     else:
         category = request.form.get('category', '').strip()
-
+ 
     new_record = {
         'id': str(uuid.uuid4()),
         'type': request.form.get('type'),
@@ -227,15 +253,19 @@ def add_record():
     if not all([new_record['type'], new_record['category'], new_record['amount'] > 0]):
         flash('类型、类别和金额都是必填项!', 'danger')
         return redirect(url_for('add_form') if is_mobile() else url_for('index'))
-
+ 
     data['records'].append(new_record)
     save_data(data)
+ 
+    session['last_used_date'] = new_record['date']
+    
     flash('记录添加成功！', 'success')
     
     if is_mobile():
         return redirect(url_for('records', selected_date=new_record['date']))
     else:
-        return redirect(url_for('index'))
+        # 【核心修改】: 重定向到 index 并附上日期参数
+        return redirect(url_for('index', selected_date=new_record['date']))
 
 @app.route('/edit_record/<record_id>', methods=['GET', 'POST'])
 def edit_record(record_id):
@@ -325,7 +355,30 @@ def settings():
     
     budgets = defaultdict(float, data.get('budgets', {}))
     template_name = 'mobile/settings.html' if is_mobile() else 'settings.html'
-    return render_template(template_name, categories=data['categories'], budgets=budgets)
+    return render_template(template_name, 
+                           categories=data['categories'], 
+                           budgets=budgets,
+                           settings=data.get('settings', {})) # 传递settings
+
+@app.route('/toggle_keep_date', methods=['POST'])
+def toggle_keep_date():
+    """【新增】处理日期记忆开关的切换"""
+    data = load_data()
+    should_keep_date = 'keep_last_date' in request.form
+    
+    if 'settings' not in data:
+        data['settings'] = {}
+    data['settings']['keep_last_date'] = should_keep_date
+    save_data(data)
+    
+    if should_keep_date:
+        flash('已开启补录模式：日期将保持为您上次使用的日期。', 'success')
+    else:
+        flash('已关闭补录模式：日期将自动恢复到今天。', 'success')
+        if 'last_used_date' in session:
+            del session['last_used_date']
+            
+    return redirect(url_for('settings'))
 
 @app.route('/add_category', methods=['POST'])
 def add_category():
@@ -408,10 +461,8 @@ def export_csv():
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": f"attachment;filename=records_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
-
 @app.route('/export_json')
 def export_json():
-    """提供 data.json 文件下载"""
     if not os.path.exists(DATA_FILE):
         flash('数据文件不存在，无法导出。', 'danger')
         return redirect(url_for('settings'))
@@ -421,40 +472,31 @@ def export_json():
         as_attachment=True,
         download_name='sunshine_accounting_backup.json'
     )
- 
 @app.route('/import_json', methods=['POST'])
 def import_json():
-    """处理上传的 JSON 文件并替换现有数据"""
     if 'json_file' not in request.files:
         flash('没有文件被上传。', 'danger')
         return redirect(url_for('settings'))
-    
     file = request.files['json_file']
- 
     if file.filename == '':
         flash('未选择任何文件。', 'danger')
         return redirect(url_for('settings'))
-    
     if file and file.filename.endswith('.json'):
         try:
             file_content = file.stream.read().decode('utf-8')
             new_data = json.loads(file_content)
- 
             if 'records' in new_data and 'categories' in new_data and 'budgets' in new_data:
                 save_data(new_data)
                 flash('数据导入成功！您的所有数据已被更新。', 'success')
             else:
                 flash('导入失败：JSON文件结构不正确，缺少必要的键 (records, categories, budgets)。', 'danger')
-        
         except (json.JSONDecodeError, UnicodeDecodeError):
             flash('导入失败：文件不是有效的UTF-8编码JSON文件。', 'danger')
         except Exception as e:
             flash(f'发生未知错误: {e}', 'danger')
     else:
         flash('导入失败：请上传一个 .json 文件。', 'danger')
-        
     return redirect(url_for('settings'))
-
 @app.route('/debuglog')
 def debug_log():
     _initialize_app_env()
@@ -507,7 +549,6 @@ def debug_log():
     </body>
     </html>
     """
-
 @app.route('/debuglog/clear', methods=['POST'])
 def clear_debug_log():
     _initialize_app_env()
@@ -515,12 +556,8 @@ def clear_debug_log():
     log_capture_string.seek(0)
     logging.info("DIAGNOSTIC: Log has been manually cleared by user.")
     return redirect(url_for('debug_log'))
- 
- 
-# --- 启动逻辑 (端口保持为 5001) ---
+
 def start_server():
-    """此函数由安卓的 Chaquopy 调用。"""
-    # 初始化调用现在被移到了需要它的函数内部，这里不需要了
     try:
         logging.info("=" * 20 + " Sunshine Accounting 服务器启动 (Android) " + "=" * 20)
         app.run(host='0.0.0.0', port=5001, debug=False)
@@ -528,6 +565,6 @@ def start_server():
         logging.critical(f"FATAL: Flask server failed to start: {e}", exc_info=True)
  
 if __name__ == '__main__':
-    # 本地测试时，初始化也会被懒加载，无需显示调用
     logging.info("=" * 20 + " Sunshine Accounting 应用启动 (Local/Docker) " + "=" * 20)
     app.run(host='0.0.0.0', port=5001, debug=True)
+

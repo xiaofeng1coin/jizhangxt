@@ -1,4 +1,4 @@
-{# 文件: templates/mobile/settings.html (样式重构版) #}
+{# 文件: templates/mobile/settings.html (样式重构版 + 日期记忆开关) #}
 
 {% extends 'mobile/layout.html' %}
 {% block title %}系统设置{% endblock %}
@@ -33,7 +33,31 @@
     </form>
 </div>
 
-<!-- 【布局修正】类别管理现在是单列堆叠，更适合移动端 -->
+<!-- 【新增】通用设置 -->
+<div class="content-card">
+    <div class="card-header">
+        <h3>通用设置</h3>
+    </div>
+    <form action="{{ url_for('toggle_keep_date') }}" method="post" class="settings-form" style="padding:0;">
+        <ul class="setting-list">
+            <li class="setting-item">
+                <div style="flex-grow: 1;">
+                    <label for="keep_last_date_mobile" style="font-weight: 500; margin-bottom: 0.25rem;">补录模式</label>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.3; margin:0;" onclick="document.getElementById('keep_last_date_mobile').click();">保持上次使用的日期。</p>
+                </div>
+                <!-- 开关UI -->
+                <label class="toggle-switch">
+                    <input type="checkbox" id="keep_last_date_mobile" name="keep_last_date" 
+                           {% if settings.keep_last_date %}checked{% endif %} 
+                           onchange="this.form.submit()">
+                    <span class="slider"></span>
+                </label>
+            </li>
+        </ul>
+    </form>
+</div>
+
+<!-- 类别管理 -->
 <div class="content-card">
     <div class="card-header">
         <h3>类别管理</h3>
@@ -84,7 +108,7 @@
     </div>
 </div>
 
-<!-- 【更新】数据管理 (导入/导出) -->
+<!-- 数据管理 (导入/导出) -->
 <div class="content-card">
     <div class="card-header">
         <h3>数据管理</h3>
