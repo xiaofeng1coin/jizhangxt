@@ -270,66 +270,139 @@ def add_record():
 @app.route('/edit_record/<record_id>', methods=['GET', 'POST'])
 def edit_record(record_id):
     data = load_data()
-    record_to_edit = next((r for r in data['records'] if r['id'] == record_id), None)
-    if not record_to_edit:
+    original_record = next((r for r in data['records'] if r['id'] == record_id), None)
+    if not original_record:
         flash('未找到该记录！', 'danger')
-        return redirect(url_for('index'))
+        return redirect(url_for('records'))
+
+    # ✅ 获取该日该类别所有记录
+    same_category_records = [
+        r for r in data['records']
+        if r['date'] == original_record['date']
+        and r['type'] == original_record['type']
+        and r['category'] == original_record['category']
+    ]
+
+    # ✅ 计算合并后的金额和备注
+    merged_amount = sum(r['amount'] for r in same_category_records)
+    merged_description = ', '.join(
+        r['description'].strip()
+        for r in same_category_records
+        if r['description'] and r['description'].strip()
+    )
 
     if request.method == 'POST':
         try:
-            amount_float = float(request.form.get('amount'))
-        except (ValueError, TypeError):
-            flash('金额必须是有效的数字！', 'danger')
+            amount = float(request.form.get('amount'))
+        except:
+            flash('金额无效', 'danger')
             return redirect(url_for('edit_record', record_id=record_id))
 
-        category = ""
-        if is_mobile():
-            selected_category = request.form.get('category')
-            if selected_category == '--custom--':
-                category = request.form.get('custom_category_input', '').strip()
-                if not category:
-                    flash('选择了自定义类别，但未填写名称！', 'danger')
-                    return redirect(url_for('edit_record', record_id=record_id))
-            else:
-                category = selected_category
-        else:
-            category = request.form.get('category').strip()
+        category = request.form.get('category')
+        new_type = request.form.get('type')
+        new_date = request.form.get('date')
+        description = request.form.get('description', '').strip()
 
-        record_to_edit['type'] = request.form.get('type')
-        record_to_edit['category'] = category
-        record_to_edit['amount'] = amount_float
-        record_to_edit['description'] = request.form.get('description').strip()
-        record_to_edit['date'] = request.form.get('date')
-        
+        # ✅ 删除该日该类别所有记录
+        data['records'] = [
+            r for r in data['records'] if not (
+                r['date'] == original_record['date'] and
+                r['type'] == original_record['type'] and
+                r['category'] == original_record['category']
+            )
+        ]
+
+        # ✅ 新增一条合并后的记录
+        new_record = {
+            'id': str(uuid.uuid4()),
+            'type': new_type,
+            'category': category,
+            'amount': amount,
+            'description': description,
+            'date': new_date
+        }
+        data['records'].append(new_record)
         save_data(data)
-        flash('记录更新成功！', 'success')
-        return redirect(url_for('records', selected_date=record_to_edit['date']))
-    
+
+        flash('记录已更新（已合并）', 'success')
+        return redirect(url_for('records', selected_date=new_date))
+
+    # ✅ 传递给前端的记录是合并后的
+    merged_record = {
+        'id': record_id,  # 用第一条记录ID作为代表
+        'type': original_record['type'],
+        'category': original_record['category'],
+        'amount': merged_amount,
+        'description': merged_description,
+        'date': original_record['date']
+    }
+
     template_name = 'mobile/edit_record.html' if is_mobile() else 'edit_record.html'
-    return render_template(template_name, record=record_to_edit)
+    return render_template(template_name, record=merged_record)
     
 @app.route('/delete_record/<record_id>', methods=['POST'])
 def delete_record(record_id):
     data = load_data()
-    record_date = next((r['date'] for r in data['records'] if r['id'] == record_id), date.today().isoformat())
-    data['records'] = [r for r in data['records'] if r['id'] != record_id]
+    record = next((r for r in data['records'] if r['id'] == record_id), None)
+    if not record:
+        flash('未找到该记录', 'danger')
+        return redirect(url_for('records'))
+
+    # ✅ 删除该日该类别所有记录
+    data['records'] = [r for r in data['records'] if not (
+        r['date'] == record['date'] and
+        r['type'] == record['type'] and
+        r['category'] == record['category']
+    )]
     save_data(data)
-    flash('记录已删除。', 'success')
-    return redirect(url_for('records', selected_date=record_date))
+    flash('已删除该类别所有记录', 'success')
+    return redirect(url_for('records', selected_date=record['date']))
 
 @app.route('/records')
 def records():
     data = load_data()
     selected_date_str = request.args.get('selected_date', date.today().isoformat())
     records_for_day = [r for r in data['records'] if r['date'] == selected_date_str]
-    income_records = [r for r in records_for_day if r['type'] == 'income']
-    expense_records = [r for r in records_for_day if r['type'] == 'expense']
+
+    # ✅ 合并逻辑：按 (type, category) 分组
+    merged = defaultdict(lambda: {
+        'id': None,  # 使用第一个记录的 ID 作为代表
+        'type': '',
+        'category': '',
+        'amount': 0.0,
+        'description': '',
+        'date': selected_date_str,
+        'count': 0  # 记录合并了几条
+    })
+
+    for r in records_for_day:
+        key = (r['type'], r['category'])
+        merged[key]['type'] = r['type']
+        merged[key]['category'] = r['category']
+        merged[key]['amount'] += r['amount']
+        merged[key]['date'] = r['date']
+        merged[key]['count'] += 1
+        if merged[key]['id'] is None:
+            merged[key]['id'] = r['id']  # 用第一条记录 ID 作为代表
+        # 合并备注
+        if r['description']:
+            desc = r['description'].strip()
+            if desc and desc not in merged[key]['description']:
+                if merged[key]['description']:
+                    merged[key]['description'] += f", {desc}"
+                else:
+                    merged[key]['description'] = desc
+
+    merged_records = list(merged.values())
+
+    income_records = [r for r in merged_records if r['type'] == 'income']
+    expense_records = [r for r in merged_records if r['type'] == 'expense']
     daily_income_total = sum(r['amount'] for r in income_records)
     daily_expense_total = sum(r['amount'] for r in expense_records)
-    
+
     template_name = 'mobile/records.html' if is_mobile() else 'records.html'
     return render_template(template_name,
-                           all_day_records=sorted(records_for_day, key=lambda x: x.get('id', ''), reverse=True),
+                           all_day_records=merged_records,
                            income_records=income_records,
                            expense_records=expense_records,
                            selected_date=selected_date_str,
